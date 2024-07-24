@@ -6,6 +6,14 @@ description = "Rust language experimental playground."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "hello"
+path = "src/bin/hello/main.rs"
+
+[[bin]]
+name = "guess"
+path = "src/bin/guess/main.rs"
+
 [dependencies]
 time = "^0.3"
 rand = "^0.8"
