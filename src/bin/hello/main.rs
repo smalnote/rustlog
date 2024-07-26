@@ -218,6 +218,86 @@ fn main() {
 
         println!("Running after panic catching");
     }
+
+    // ownership move by assignment
+    {
+        let s1 = String::from("hello");
+        let s2 = s1; // move ownership
+        // println!("s1 = {s1}"); // error: s1 moved to s2
+        println!("s2 = {s2}");
+    }
+
+    // ownership move by function call
+    {
+        fn takes_ownership(s: String) {
+            println!("s = {s}");
+        }
+        let s1 = String::from("hello");
+        takes_ownership(s1);
+        // println!("s1 = {s1}"); // error: s1 moved to takes_ownership
+
+        fn gives_ownership() -> String {
+            let s = String::from("hello");
+            s
+        }
+        let s2 = gives_ownership();
+        println!("s2 = {s2}");
+    }
+
+    // box reference
+    {
+        let mut x = Box::new(42);
+        *x /= 6;
+        println!("x = {}", x);
+        println!("*x = {}", *x);
+        println!("&x = {}", &x);
+    }
+
+    // partial move by assignment, partial borrow by reference
+    {
+        #[derive(Debug)]
+        struct Person {
+            name: String,
+            age: Box<u8>,
+        }
+        let person = Person {
+            name: String::from("Alice"),
+            age: Box::new(30),
+        };
+
+        println!("person = {:?}", person);
+
+        let Person { name, ref age } = person;
+        println!("name = {name}, age = {age}");
+
+        // error: value borrowed here after move
+        // println!("person = {:?}", person);
+
+        // ok: name is moved, age is borrowed
+        println!("person.age = {}", person.age);
+    }
+
+    // tuple index
+    {
+        let t = (String::from("hello"), String::from("world"));
+        let _s: String = t.0;
+        println!("t.1 = {}", t.1); // t.0 is moved to _s, t.1 is still owned by t
+    }
+
+    // borrow
+    {
+        let t: (String, String) = (String::from("hello"), String::from("world"));
+        // borrowing by preceeding `ref` or `ref mut`
+        let (ref s1, ref s2) = t;
+        println!("borrowing by `ref s1, ref s2`, s1 = {s1}, s2 = {s2}, t = {:?}", t);
+        // another form of borrowing
+        let (s3, s4) = &t;
+        println!("borrowing by `&t` s3 = {s3}, s4 = {s4}, t = {:?}", t);
+
+        // by clone
+        let (s5, s6) = t.clone();
+        println!("by t.clone(), s5 = {s5}, s6 = {s6}, t = {:?}", t);
+    }
 }
 
 fn add(a: i32, b: i32) -> i32 {
