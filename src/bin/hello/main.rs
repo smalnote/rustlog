@@ -305,6 +305,75 @@ fn main() {
         let (s5, s6) = t.clone();
         println!("by t.clone(), s5 = {s5}, s6 = {s6}, t = {:?}", t);
     }
+
+    // if-let
+    {
+        let optional = Some(42);
+        if let Some(number) = optional {
+            assert_eq!(number, 42);
+        }
+    }
+
+    // if return
+    {
+        let x = 42;
+        let y = if x == 42 { 1 } else { 0 };
+        assert_eq!(y, 1);
+    }
+
+    // loop return
+    {
+        let mut x = 0;
+        let y = loop {
+            x += 1;
+            if x == 42 {
+                break x;
+            }
+        };
+        assert_eq!(y, 42);
+    }
+
+    // nested loop break
+    {
+        let mut x = 0;
+        'outer: loop {
+            'inner: loop {
+                x += 1;
+                if x == 42 {
+                    break 'outer;
+                }
+            }
+        }
+        assert_eq!(x, 42);
+    }
+
+    // while loop
+    {
+        let mut x = 0;
+        while x < 42 {
+            x += 1;
+        }
+        assert_eq!(x, 42);
+    }
+
+    // for in range
+    {
+        let mut sum = 0;
+        for i in 0..42 {
+            sum += i;
+        }
+        assert_eq!(sum, 861);
+    }
+
+    // for in array
+    {
+        let a = [1, 2, 3, 4, 5];
+        let mut sum = 0;
+        for i in a.iter() {
+            sum += i;
+        }
+        assert_eq!(sum, 15);
+    }
 }
 
 fn add(a: i32, b: i32) -> i32 {
