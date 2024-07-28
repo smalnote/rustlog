@@ -14,6 +14,13 @@ fn main() {
         add(random_number, random_number)
     );
 
+    // variable declaration shadowing
+    {
+        let number = "42";
+        let number = number.parse::<i32>().expect("Failed to parse number");
+        assert_eq!(number, 42);
+    }
+
     // destructuring
     {
         let (mut x, y) = (3, 4);
@@ -284,7 +291,7 @@ fn main() {
         println!("t.1 = {}", t.1); // t.0 is moved to _s, t.1 is still owned by t
     }
 
-    // borrow
+    // borrowing
     {
         let t: (String, String) = (String::from("hello"), String::from("world"));
         // borrowing by preceeding `ref` or `ref mut`
