@@ -211,7 +211,7 @@ fn main() {
         });
 
         match result {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(err) => {
                 if let Some(message) = err.downcast_ref::<&str>() {
                     println!("Caught a panic with message(&str): {message}");
@@ -220,7 +220,7 @@ fn main() {
                 } else {
                     println!("Caught a panic message: {:?}", err);
                 }
-            },
+            }
         }
 
         println!("Running after panic catching");
@@ -230,7 +230,7 @@ fn main() {
     {
         let s1 = String::from("hello");
         let s2 = s1; // move ownership
-        // println!("s1 = {s1}"); // error: s1 moved to s2
+                     // println!("s1 = {s1}"); // error: s1 moved to s2
         println!("s2 = {s2}");
     }
 
@@ -296,7 +296,10 @@ fn main() {
         let t: (String, String) = (String::from("hello"), String::from("world"));
         // borrowing by preceeding `ref` or `ref mut`
         let (ref s1, ref s2) = t;
-        println!("borrowing by `ref s1, ref s2`, s1 = {s1}, s2 = {s2}, t = {:?}", t);
+        println!(
+            "borrowing by `ref s1, ref s2`, s1 = {s1}, s2 = {s2}, t = {:?}",
+            t
+        );
         // another form of borrowing
         let (s3, s4) = &t;
         println!("borrowing by `&t` s3 = {s3}, s4 = {s4}, t = {:?}", t);
@@ -337,7 +340,7 @@ fn main() {
     {
         let mut x = 0;
         'outer: loop {
-            'inner: loop {
+            loop {
                 x += 1;
                 if x == 42 {
                     break 'outer;
@@ -373,6 +376,115 @@ fn main() {
             sum += i;
         }
         assert_eq!(sum, 15);
+    }
+
+    // borrow - only one mutable reference can exist at a time
+    {
+        let mut s = String::from("hello");
+        {
+            let s1 = &mut s;
+            s1.push_str(" world");
+            // s1 reference goes out of scope here
+        }
+        // s2 is the only mutable reference to s at this point
+        let s2 = &mut s;
+        s2.push_str("!");
+        assert_eq!(s, "hello world!");
+    }
+
+    // print pointer address of reference
+    {
+        let s = String::from("hello");
+        let s = &s;
+        println!("s = {:p}", s);
+        println!("s = {s:p}");
+    }
+
+    // dereference
+    {
+        let n = 42;
+        let m = &n;
+        assert_eq!(n, *m);
+    }
+
+    // two way of reference
+    {
+        let c = '中';
+        let c1 = &c;
+        let ref c2 = c;
+        assert_eq!(*c1, *c2);
+        assert_eq!(c1, c2); // c1, c2 are both references(pointers) to c
+    }
+
+    // &str string slice
+    {
+        let s: String = String::from("hello world");
+        let hello: &str = &s[0..5]; // immutable &str
+        let world: &str = &s[6..11]; // immutable &str
+        assert_eq!(hello, "hello");
+        assert_eq!(world, "world");
+    }
+
+    // str can be use in Box
+    {
+        let s: Box<str> = "hello world".into();
+        let ss: &str = &(*s);
+        assert_eq!(ss, "hello world");
+    }
+
+    // you can only concat String with &str
+    {
+        let s1: String = String::from("hello ");
+        let s2: String = String::from("world!");
+        let s3: String = s1 + &s2; // s1 ownership moved to s3, &String -> &str
+        let s4: String = "hello ".to_string() + s2.as_str(); // cannot use s1 here
+        assert_eq!(s3, s4);
+    }
+
+    // string byte escapes
+    {
+        let s = "I'm writing Ru\x73\x74!";
+        println!("{}", s);
+    }
+
+    // string unicode points
+    {
+        let unicode_codepoint = "\u{211D}";
+        let character_name = "\"Double-stroke capital R\"";
+        println!(
+            "Unicode point: {}, Character name: {}",
+            unicode_codepoint, character_name
+        );
+    }
+
+    // multiple lines string
+    {
+        let long_string = "String literals
+                can span multiple lines.
+                The linebreak and indentation here \
+                can be escaped too!";
+        println!("{}", long_string);
+    }
+
+    // raw string
+    {
+        let raw_str = r"I'm writing Ru\x73\x74!";
+        println!("{}", raw_str);
+    }
+
+    // String -> &str by slice index
+    {
+        let s1 = String::from("hi,中国");
+        let h1: &str = &s1[3..6];
+        assert_eq!(h1, "中");
+    }
+
+    // iterating characters in a string
+    {
+        let s1 = String::from("hello, 世界");
+        for c in s1.chars() {
+            println!("{}", c);
+        }
     }
 }
 
