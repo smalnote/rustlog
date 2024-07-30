@@ -486,6 +486,236 @@ fn main() {
             println!("{}", c);
         }
     }
+
+    // array literal
+    {
+        let arr: [i32; 5] = [1, 2, 3, 4, 5];
+        assert_eq!(std::mem::size_of_val(&arr), 5 * std::mem::size_of::<i32>());
+        let arr: [i64; 5] = [1, 2, 3, 4, 5];
+        assert_eq!(arr.len(), 5);
+        assert_eq!(std::mem::size_of_val(&arr), 5 * std::mem::size_of::<i64>());
+        assert_eq!(arr[3], 4);
+    }
+
+    // init array with same value
+    {
+        let arr: [i32; 5] = [0; 5];
+        assert_eq!(arr, [0, 0, 0, 0, 0]);
+    }
+
+    // get array element by get
+    {
+        let arr: [i32; 5] = [1, 2, 3, 4, 5];
+        let third: &i32 = arr.get(2).unwrap();
+        assert_eq!(*third, 3);
+    }
+
+    // slice if type of &[T]
+    {
+        let arr: [i32; 5] = [1, 2, 3, 4, 5];
+        let slice: &[i32] = &arr;
+        assert_eq!(slice.len(), 5);
+        assert_eq!(slice[3], 4);
+        let first_three: &[i32] = &arr[..3];
+        assert_eq!(first_three, [1, 2, 3]);
+        // slice has ptr and len, size_of_val is 2 * size_of<usize>
+        assert_eq!(
+            std::mem::size_of_val(&first_three),
+            2 * std::mem::size_of::<usize>()
+        );
+    }
+
+    // &str is a slice of char
+    {
+        let s: String = String::from("hello, world!");
+        let world: &str = &s[7..12];
+        assert_eq!(world, "world");
+    }
+
+    // String index in bytes, a chinese character is 3 bytes
+    {
+        let s: String = String::from("你好，世界!");
+        let world: &str = &s[9..15];
+        assert_eq!(world, "世界");
+    }
+
+    // &String can be convert to &str implicitly
+    {
+        fn take_firt_word(s: &str) -> &str {
+            let bytes = s.as_bytes();
+            for (i, &item) in bytes.iter().enumerate() {
+                if item == b' ' {
+                    return &s[..i];
+                }
+            }
+            s
+        }
+        let s: String = String::from("hello world!");
+        let first_word: &str = take_firt_word(&s);
+        assert_eq!(first_word, "hello");
+    }
+
+    // tuple compound values of different type
+    {
+        let tt: (u8, (i16, &str)) = (42, (-42, "hello"));
+        // acess tuple element by .index
+        assert_eq!(tt.1 .1, "hello");
+    }
+
+    // tuple up to 12 elements can be print
+    {
+        let twelve_tuple = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, "twelve");
+        println!("{:?}", twelve_tuple);
+    }
+
+    // tuple destructuring
+    {
+        let t = (1, 2, 3);
+        let (.., z) = t;
+        assert_eq!(z, 3);
+    }
+
+    // tuple as function parameter
+    {
+        fn sum_multiply(t: (i32, i32)) -> (i32, i32) {
+            (t.0 + t.1, t.0 * t.1)
+        }
+        let t = (1, 2);
+        assert_eq!(sum_multiply(t), (3, 2));
+    }
+
+    // struct is compund type with named fields with different types
+    {
+        struct User {
+            name: String,
+            age: u8,
+            email: String,
+        }
+
+        fn new_user(name: String, age: u8, email: String) -> User {
+            User { name, age, email } // shothand syntax for struct initialization
+        }
+        let member = User {
+            name: String::from("Alice"),
+            age: 30,
+            email: String::from("alice@example.com"),
+        };
+        let member_new = new_user(String::from("Alice"), 30, String::from("alice@example.com"));
+        assert_eq!(member.name, member_new.name);
+        assert_eq!(member.age, member_new.age);
+        assert_eq!(member.email, member_new.email);
+    }
+
+    // copy struct with spread syntax
+    {
+        struct User {
+            name: String,
+            age: u8,
+            email: String,
+        }
+
+        let mut user1: User = User {
+            name: String::from("Alice"),
+            age: 30,
+            email: String::from("alice@example.com"),
+        };
+        let user2: User = User { age: 31, ..user1 }; // clone user1 and update age
+
+        // update user1
+        user1.name = String::from("Bob");
+        user1.email = String::from("bob@example.com");
+        assert_eq!(user1.name, "Bob");
+        assert_eq!(user1.age, 30);
+        assert_eq!(user1.email, "bob@example.com");
+
+        // user2 remain a clone of user1 before update
+        assert_eq!(user2.name, "Alice");
+        assert_eq!(user2.age, 31);
+        assert_eq!(user2.email, "alice@example.com");
+    }
+
+    // init struct by field name shorthand
+    {
+        struct User {
+            name: String,
+            age: u8,
+            email: String,
+        }
+
+        fn new_user(name: String, age: u8, email: String) -> User {
+            User { name, age, email }
+        }
+
+        let user1: User = new_user(String::from("Alice"), 31, String::from("alice@example.com"));
+        assert_eq!(
+            std::mem::size_of_val(&user1),
+            std::mem::size_of_val(&user1.name) // String 8bytes * 3
+                + std::mem::size_of_val(&user1.age) // u8 1byte
+                + 7 // alignment padding
+                + std::mem::size_of_val(&user1.email) // String 8bytes * 3
+        );
+    }
+
+    // print struct with debug format
+    {
+        #[derive(Debug)]
+        #[allow(dead_code)]
+        struct User {
+            name: String,
+            age: u8,
+            email: String,
+        }
+
+        let user: User = User {
+            name: String::from("Alice"),
+            age: 30,
+            email: String::from("alice@example.com"),
+        };
+        dbg!(&user); // print to stderr with debug format
+        println!("{:?}", &user);
+    }
+
+    // unit struct is a struct without fields
+    {
+        struct Unit;
+        let unit = Unit;
+        assert_eq!(std::mem::size_of_val(&unit), 0);
+    }
+
+    // tuple struct is a struct with unnamed fields
+    {
+        struct Color(u8, u8, u8);
+        let black = Color(0, 0, 0);
+        assert_eq!(black.0, 0);
+        assert_eq!(black.1, 0);
+        assert_eq!(black.2, 0);
+    }
+
+    // think of struct is a type definition keyword
+    {
+        struct User {
+            name: String,
+        }
+        struct Point(i32, i32, i32);
+        struct Empty;
+        struct EmptyTuple();
+        let alice: User = User {
+            name: String::from("Alice"),
+        };
+        let origin: Point = Point(0, 0, 0);
+        let empty: Empty = Empty;
+        let empty_tuple: EmptyTuple = EmptyTuple();
+        assert_eq!(std::mem::size_of_val(&alice), std::mem::size_of::<String>());
+        assert_eq!(
+            std::mem::size_of_val(&origin),
+            3 * std::mem::size_of::<i32>()
+        );
+        assert_eq!(std::mem::size_of_val(&empty), 0);
+        assert_eq!(std::mem::size_of_val(&empty_tuple), 0);
+
+        assert_eq!(alice.name, "Alice");
+        assert_eq!(origin.0 + origin.1 + origin.2, 0);
+    }
 }
 
 fn add(a: i32, b: i32) -> i32 {
