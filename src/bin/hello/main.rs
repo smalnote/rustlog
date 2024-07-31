@@ -4,6 +4,9 @@ use rand::Rng;
 use time::OffsetDateTime;
 
 fn main() {
+    fn add(a: i32, b: i32) -> i32 {
+        return a + b;
+    }
     let greeting: &str = "Hello, world!";
     let mut rng = rand::thread_rng();
     let random_number: i32 = rng.gen_range(0..100);
@@ -716,8 +719,4 @@ fn main() {
         assert_eq!(alice.name, "Alice");
         assert_eq!(origin.0 + origin.1 + origin.2, 0);
     }
-}
-
-fn add(a: i32, b: i32) -> i32 {
-    return a + b;
 }
