@@ -132,12 +132,24 @@ fn main() {
         assert_eq!(0b0000_1111 << 4, 0b1111_0000);
     }
 
-    // char
+    // char 4-bytes for UTF-16
     {
         let c: char = 'a';
         println!("size_of_val('a') = {}", std::mem::size_of_val(&c));
         let c: char = '中';
         println!("size_of_val('中') = {}", std::mem::size_of_val(&c));
+        println!("size_of<char> = {}", std::mem::size_of::<char>());
+    }
+
+    // char in String is dynamically-sized of UTF-8(1-4 bytes)
+    {
+        let hello: &str = "hello, 世界!";
+        for c in hello.chars() {
+            println!(
+                "char string: {c}, c.to_string().as_bytes().len() = {}",
+                c.to_string().as_bytes().len(),
+            );
+        }
     }
 
     // if-statement
@@ -188,6 +200,10 @@ fn main() {
         fn _todo() -> ! {
             todo!()
         }
+
+        fn _never_return_wo_mark() {
+            panic!()
+        }
     }
 
     // match
@@ -231,9 +247,8 @@ fn main() {
 
     // ownership move by assignment
     {
-        let s1 = String::from("hello");
-        let s2 = s1; // move ownership
-                     // println!("s1 = {s1}"); // error: s1 moved to s2
+        let s1: String = String::from("hello");
+        let s2: String = s1; // memory area of s1 move ownership from s1 to s2
         println!("s2 = {s2}");
     }
 
@@ -256,7 +271,7 @@ fn main() {
 
     // box reference
     {
-        let mut x = Box::new(42);
+        let mut x: Box<i32> = Box::new(42);
         *x /= 6;
         println!("x = {}", x);
         println!("*x = {}", *x);
@@ -314,7 +329,7 @@ fn main() {
 
     // if-let
     {
-        let optional = Some(42);
+        let optional: Option<i32> = Some(42);
         if let Some(number) = optional {
             assert_eq!(number, 42);
         }
@@ -322,15 +337,15 @@ fn main() {
 
     // if return
     {
-        let x = 42;
-        let y = if x == 42 { 1 } else { 0 };
+        let x: i32 = 42;
+        let y: i32 = if x == 42 { 1 } else { 0 };
         assert_eq!(y, 1);
     }
 
     // loop return
     {
-        let mut x = 0;
-        let y = loop {
+        let mut x: i32 = 0;
+        let y: i32 = loop {
             x += 1;
             if x == 42 {
                 break x;
@@ -364,7 +379,7 @@ fn main() {
 
     // for in range
     {
-        let mut sum = 0;
+        let mut sum: i32 = 0;
         for i in 0..42 {
             sum += i;
         }
@@ -373,7 +388,7 @@ fn main() {
 
     // for in array
     {
-        let a = [1, 2, 3, 4, 5];
+        let a: [i32; 5] = [1, 2, 3, 4, 5];
         let mut sum = 0;
         for i in a.iter() {
             sum += i;
@@ -412,11 +427,26 @@ fn main() {
 
     // two way of reference
     {
-        let c = '中';
-        let c1 = &c;
+        let c: char = '中';
+        let c1: &char = &c;
         let ref c2 = c;
         assert_eq!(*c1, *c2);
         assert_eq!(c1, c2); // c1, c2 are both references(pointers) to c
+    }
+
+    // use ref for pattern matching
+    {
+        let maybe_name: Option<String> = Some(String::from("alice"));
+        match maybe_name {
+            // ref here just borrow the value, not move ownership
+            // it is not matched against Some(String), but Some(&String)
+            Some(ref name) => {
+                assert_eq!(name, "alice");
+            }
+            _ => {}
+        }
+        // maybe_name still available here
+        assert_eq!(maybe_name.unwrap(), "alice");
     }
 
     // &str string slice
@@ -484,7 +514,7 @@ fn main() {
 
     // iterating characters in a string
     {
-        let s1 = String::from("hello, 世界");
+        let s1: String = String::from("hello, 世界");
         for c in s1.chars() {
             println!("{}", c);
         }
@@ -515,12 +545,12 @@ fn main() {
 
     // slice if type of &[T]
     {
-        let arr: [i32; 5] = [1, 2, 3, 4, 5];
+        let arr: [i32; 5] = [0, 1, 2, 3, 4];
         let slice: &[i32] = &arr;
         assert_eq!(slice.len(), 5);
-        assert_eq!(slice[3], 4);
+        assert_eq!(slice[3], 3);
         let first_three: &[i32] = &arr[..3];
-        assert_eq!(first_three, [1, 2, 3]);
+        assert_eq!(first_three, [0, 1, 2]);
         // slice has ptr and len, size_of_val is 2 * size_of<usize>
         assert_eq!(
             std::mem::size_of_val(&first_three),
@@ -538,8 +568,18 @@ fn main() {
     // String index in bytes, a chinese character is 3 bytes
     {
         let s: String = String::from("你好，世界!");
+
+        // in bytes index
         let world: &str = &s[9..15];
         assert_eq!(world, "世界");
+
+        // &str in chars index
+        let ss: &str = &s;
+        assert_eq!(&ss[3..5], "世界");
+
+        // chars() iterator index
+        let substring: String = s.chars().skip(3).take(2).collect::<String>();
+        assert_eq!(substring, "世界");
     }
 
     // &String can be convert to &str implicitly
@@ -573,7 +613,7 @@ fn main() {
 
     // tuple destructuring
     {
-        let t = (1, 2, 3);
+        let t: (i32, i32, i32) = (1, 2, 3);
         let (.., z) = t;
         assert_eq!(z, 3);
     }
@@ -583,7 +623,7 @@ fn main() {
         fn sum_multiply(t: (i32, i32)) -> (i32, i32) {
             (t.0 + t.1, t.0 * t.1)
         }
-        let t = (1, 2);
+        let t: (i32, i32) = (1, 2);
         assert_eq!(sum_multiply(t), (3, 2));
     }
 
@@ -617,19 +657,19 @@ fn main() {
             email: String,
         }
 
-        let mut user1: User = User {
+        let user1: User = User {
             name: String::from("Alice"),
             age: 30,
             email: String::from("alice@example.com"),
         };
-        let user2: User = User { age: 31, ..user1 }; // clone user1 and update age
+        let user2: User = User { age: 31, ..user1 }; // user1.name and user1.email are moved
 
         // update user1
-        user1.name = String::from("Bob");
-        user1.email = String::from("bob@example.com");
-        assert_eq!(user1.name, "Bob");
+        // error: value borrowed here after move
+        // assert_eq!(user1.name, "Alice");
         assert_eq!(user1.age, 30);
-        assert_eq!(user1.email, "bob@example.com");
+        // error: value borrowed here after move
+        // assert_eq!(user1.email, "alice@example.com");
 
         // user2 remain a clone of user1 before update
         assert_eq!(user2.name, "Alice");
