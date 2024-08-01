@@ -573,10 +573,6 @@ fn main() {
         let world: &str = &s[9..15];
         assert_eq!(world, "世界");
 
-        // &str in chars index
-        let ss: &str = &s;
-        assert_eq!(&ss[3..5], "世界");
-
         // chars() iterator index
         let substring: String = s.chars().skip(3).take(2).collect::<String>();
         assert_eq!(substring, "世界");
