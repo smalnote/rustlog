@@ -920,4 +920,104 @@ fn main() {
         let list = List::Cons(1, Box::new(List::Cons(2, Box::new(List::Nil))));
         println!("{:?}", list);
     }
+
+    // if/else expression in assignment
+    {
+        let n: i32 = 5;
+        let big_n: i32 = if -10 < n && n < 10 {
+            println!("{} is a small number", n);
+            10 * n
+        } else {
+            println!("{} is a big number", n);
+            n / 2
+        };
+        println!("big_n = {}", big_n);
+    }
+
+    // for-in move ownership by default
+    {
+        let names: [String; 2] = [String::from("Alice"), String::from("Bob")];
+        for name in &names {
+            // borrow names
+            println!("{}", name);
+        }
+        println!("{:?}", names);
+    }
+
+    // for-in get copy of array of primary types
+    {
+        let numbers: [i32; 3] = [1, 2, 3];
+        for number in numbers {
+            // copy numbers
+            println!("{}", number);
+        }
+        println!("{:?}", numbers);
+    }
+
+    // for-in iterate with index
+    {
+        let names: [String; 3] = [
+            String::from("Alice"),
+            String::from("Bob"),
+            String::from("Charlie"),
+        ];
+
+        // iter().enumerate() borrow names
+        for (i, name) in names.iter().enumerate() {
+            println!("{}: {}", i, name);
+        }
+
+        println!("{:?}", names);
+    }
+
+    // loop with break and return value
+    {
+        let numbers: [i32; 8] = [1, 2, 3, 4, 5, 15, 21, 31];
+        let mut i = 0;
+        let key: Option<i32> = loop {
+            if i >= numbers.len() {
+                break Option::None;
+            }
+            let number = numbers[i];
+            if number % 7 == 0 {
+                break Some(number);
+            }
+            i += 1;
+        };
+
+        println!("key = {:?}", key);
+    }
+
+    // labeled loop with 'name
+    {
+        let p: &str = "Hello, I'm \"Alice\", and he is \"Bob\".";
+        let bytes: &[u8] = p.as_bytes();
+        let mut i = 0;
+        'outer: loop {
+            if i >= p.len() {
+                break 'outer;
+            }
+            if bytes[i] == b'\"' {
+                let start = i;
+                i += 1;
+                if i >= p.len() {
+                    break 'outer;
+                }
+                'inner: loop {
+                    if bytes[i] == b'\"' {
+                        let end = i;
+                        println!("Quoted string: {}", &p[start..=end]);
+                        break 'inner;
+                    }
+                    i += 1;
+                    if i >= p.len() {
+                        break 'outer;
+                    }
+                }
+                i += 1;
+            } else {
+                i += 1;
+            }
+        }
+    }
 }
