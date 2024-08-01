@@ -78,6 +78,15 @@ fn main() {
         println!("type of 42_u128: {}", std::any::type_name_of_val(&y));
     }
 
+    // type suffix in Option
+    {
+        let n = Some(42_u32);
+
+        if let Some(n) = n {
+            assert_eq!(n, 42);
+        }
+    }
+
     // const
     {
         assert_eq!(std::i8::MAX, 127);
@@ -1017,6 +1026,118 @@ fn main() {
                 i += 1;
             } else {
                 i += 1;
+            }
+        }
+    }
+
+    // match with wildcard
+    {
+        let x: i32 = 42;
+        match x {
+            0 => println!("zero"),
+            1 => println!("one"),
+            _ => println!("other"),
+        }
+    }
+
+    // match with returned value
+    {
+        let x: i32 = 42;
+        let y = match x {
+            0 => "zero",
+            1 => "one",
+            _ => "other",
+        };
+        assert_eq!(y, "other");
+    }
+
+    // rename matched value
+    {
+        let x: i32 = 42;
+        match x {
+            0 => println!("zero"),
+            1 => println!("one"),
+            n => println!("other: {n}"),
+        }
+
+        #[derive(Debug)]
+        enum Message {
+            Quit,
+            Move { x: i32, y: i32 },
+            Write(String),
+            ChangeColor(i32, i32, i32),
+        }
+
+        let messages: [Message; 4] = [
+            Message::Quit,
+            Message::Move { x: 1, y: 2 },
+            Message::Write(String::from("hello")),
+            Message::ChangeColor(0xff, 0xff, 0xff),
+        ];
+
+        for message in messages {
+            match message {
+                Message::Quit => println!("Quit"),
+                Message::Move { x: a, y: b } => println!("Move to ({a}, {b})"), // rename x to a, y to b
+                Message::Write(s) => println!("Write {s}"),
+                Message::ChangeColor(r, g, b) => println!("Change color to ({r}, {g}, {b})"),
+            }
+        }
+    }
+
+    // matches! macro
+    {
+        let alphabets = ['a', 'b', 'c', 'd', 'e', '0', 'A', 'L'];
+
+        // for-in [char; 8] array is copy of primary type
+        for c in alphabets {
+            assert!(matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9'));
+            if matches!(c, 'a'..='z') {
+                println!("lowercase: {c}");
+            } else if matches!(c, 'A'..='Z') {
+                println!("uppercase: {c}");
+            } else {
+                println!("other: {c}");
+            }
+        }
+
+        // alphabet is still available here
+        println!("{:?}", alphabets);
+    }
+
+    // matches! for match enum
+    {
+        enum MyEnum {
+            Foo,
+            Bar,
+        }
+        let v: Vec<MyEnum> = vec![MyEnum::Foo, MyEnum::Bar, MyEnum::Foo];
+        for e in v {
+            // e == MyEnum::Foo requires MyEnum implementing PartialEq
+            // if e == MyEnum::Foo {
+            // using matches! macro
+            if matches!(e, MyEnum::Foo) {
+                println!("Foo");
+            } else if matches!(e, MyEnum::Bar) {
+                println!("Bar");
+            }
+        }
+    }
+
+    // enum with arbitrary u32
+    {
+        enum Foo {
+            Bar,
+            Baz,
+            Qux(u32),
+        }
+
+        let foos = [Foo::Bar, Foo::Baz, Foo::Qux(42)];
+        for foo in foos.iter() {
+            match foo {
+                Foo::Bar => println!("Bar"), // Foo::Bar as u8 is invalid here
+                Foo::Baz => println!("Baz"), // Foo::Baz as u8 is invalid here
+                Foo::Qux(n) => println!("Qux({n})"),
             }
         }
     }
