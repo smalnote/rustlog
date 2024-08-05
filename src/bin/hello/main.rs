@@ -1141,4 +1141,87 @@ fn main() {
             }
         }
     }
+
+    // pattern, use | to match serval values
+    {
+        for i in 0..3 {
+            match i {
+                0 | 1 => println!("zero or one"),
+                _ => println!("other"),
+            }
+        }
+    }
+
+    // pattern, use ..= to match inclusive range
+    {
+        for i in 0..3 {
+            match i {
+                0..=1 => println!("zero or one"),
+                _ => println!("other"),
+            }
+        }
+    }
+
+    // pattern, use @ to create a variable that holds a value
+    {
+        struct Point {
+            x: i32,
+            y: i32,
+        }
+
+        let p = Point { x: 0, y: 10 };
+        match p {
+            Point { x, y: 0 } => println!("Ont the x axis at x = {x}"),
+            Point {
+                x: newx @ 0..=5,
+                y: y @ (10 | 20 | 30),
+            } => println!("On the y axis at y = {y}, x = {newx}"),
+            Point { x, y } => println!("x = {x}, y = {y}"),
+        }
+    }
+
+    // pattern, use .. to match any value
+    {
+        let x = 1;
+        match x {
+            1.. => println!("one or more"),
+            _ => println!("other"),
+        }
+    }
+
+    // pattern match enum struct
+    {
+        enum Message {
+            Hello { id: i32 },
+        }
+
+        let msg: Message = Message::Hello { id: 5 };
+        match msg {
+            Message::Hello { id: id @ 3..=7 } => println!("Found and id in range [3, 7]: {id}"),
+            Message::Hello {
+                id: newid @ (42 | 53 | 67),
+            } => println!("Found specific id {newid}"),
+            Message::Hello { id } => println!("Found some other id: {id}"),
+        }
+    }
+
+    // pattern match with if statement
+    {
+        let num: Option<i32> = Some(4);
+        let split: i32 = 5;
+        match num {
+            Some(x) if x < split => println!("x is less than {split}"),
+            Some(_) => println!("x is greater than or equal to {split}"),
+            None => {}
+        }
+    }
+
+    // pattern match, using .. to ignore remaing parts of the value
+    {
+        let numbers = (2, 4, 6, 8);
+        match numbers {
+            (2, .., last) => println!("first = 2, last = {last}"),
+            (first @ (..2 | 3..), ..) => println!("first = {first}"),
+        }
+    }
 }
