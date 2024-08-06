@@ -1224,4 +1224,125 @@ fn main() {
             (first @ (..2 | 3..), ..) => println!("first = {first}"),
         }
     }
+
+    // struct method and associated function
+    {
+        struct Rectangle {
+            width: u32,
+            height: u32,
+        }
+
+        // impl block defines type struct methods and associated functions
+        impl Rectangle {
+            // associated function, no parameter `self`, reference to type struct
+            pub fn new(width: u32, height: u32) -> Rectangle {
+                Rectangle { width, height }
+            }
+
+            // use `Self` as synoym of struct
+            fn square(size: u32) -> Self {
+                Self {
+                    width: size,
+                    height: size,
+                }
+            }
+
+            // method, consume parameter `&self` to borrow type struct instance
+            pub fn area(&self) -> u32 {
+                self.width * self.height
+            }
+
+            // paramter `self` move ownership of instance
+            fn clear(self) {}
+
+            // paramter `&mut self` borrow mutable instance
+            fn rotate(&mut self) {
+                let w: u32 = self.width;
+                self.width = self.height;
+                self.height = w;
+            }
+
+            // self must be the first paramter
+            fn zoom(&mut self, ratio: f32) {
+                self.width = (self.width as f32 * ratio) as u32;
+                self.height = (self.height as f32 * ratio) as u32;
+            }
+
+            // canonical form of self paramter
+            fn normalize(self: &mut Self) {
+                if self.width > self.height {
+                    self.height = self.width
+                } else {
+                    self.width = self.height
+                }
+            }
+        }
+
+        let mut rect = Rectangle::new(30_u32, 50_u32);
+        assert_eq!(rect.area(), 1500);
+
+        rect.rotate();
+        assert_eq!(rect.width, 50);
+        assert_eq!(rect.height, 30);
+
+        rect.zoom(2.2);
+        assert_eq!(rect.width, 110);
+        assert_eq!(rect.height, 66);
+
+        rect.normalize();
+        assert_eq!(rect.width, 110);
+        assert_eq!(rect.height, 110);
+
+        rect.clear(); // value ownership moved
+
+        let square = Rectangle::square(10);
+        assert_eq!(square.area(), 100);
+    }
+
+    // can have multiple impl block for a same type
+    {
+        struct TrafficLight {
+            color: String,
+        }
+
+        impl TrafficLight {
+            pub fn new() -> Self {
+                Self {
+                    color: "red".to_string(),
+                }
+            }
+        }
+
+        impl TrafficLight {
+            pub fn get_state(&self) -> &str {
+                self.color.as_str()
+            }
+        }
+
+        let light = TrafficLight::new();
+        assert_eq!(light.get_state(), "red")
+    }
+
+    // implement method and assocaited functions for type enum
+    #[allow(dead_code)]
+    {
+        enum TrafficLight {
+            Red,
+            Green,
+            Yellow,
+        }
+
+        impl TrafficLight {
+            pub fn color(&self) -> &str {
+                match self {
+                    TrafficLight::Green => "green",
+                    TrafficLight::Red => "red",
+                    Self::Yellow => "yellow", // can also use `Self` to reference type to implement
+                }
+            }
+        }
+
+        let c = TrafficLight::Yellow;
+        assert_eq!(c.color(), "yellow");
+    }
 }
