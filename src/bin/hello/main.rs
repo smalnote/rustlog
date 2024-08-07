@@ -1345,4 +1345,135 @@ fn main() {
         let c = TrafficLight::Yellow;
         assert_eq!(c.color(), "yellow");
     }
+
+    // generic function
+    {
+        struct A; // type A is a unit type
+        struct S(A); // type S is a unary tuple of A, `(A)`
+        struct SGen<T>(T); // type SGen is a unary tuple of abitary type
+
+        fn reg_fn(_s: S) {}
+        fn gen_spec_t(_s: SGen<A>) {}
+        fn gen_spec_i32(_s: SGen<i32>) {}
+        fn generic<T>(_s: SGen<T>) {}
+
+        reg_fn(S(A));
+        gen_spec_t(SGen(A));
+        gen_spec_i32(SGen(42_i32));
+
+        // specify type parameter explicitly by using ::<T> of generic function
+        generic::<char>(SGen('A'));
+
+        // specify type parameter implicitly by passing concrete type argument
+        generic(SGen('C'));
+
+        // specify struct type parameter by using ::<T> of generic struct
+        generic(SGen::<u32>(42));
+    }
+
+    // generic with trait bound
+    {
+        fn sum<T: std::ops::Add<Output = T>>(a: T, b: T) -> T {
+            a + b
+        }
+
+        assert_eq!(2, sum(1_i8, 1_i8));
+        assert_eq!(49, sum(42, 7));
+        assert_eq!(3.14, sum(3.0, 0.14));
+    }
+
+    // generic struct
+    {
+        #[derive(Debug)]
+        #[allow(dead_code)]
+        struct Point<T> {
+            x: T,
+            y: T,
+        }
+
+        let integer: Point<i32> = Point { x: 5, y: 10 };
+        let float: Point<f64> = Point { x: 1.0, y: 4.0 };
+
+        println!("integer point = {integer:?}");
+        println!("float point = {float:?}");
+    }
+
+    // generic struct with two type parameter
+    #[allow(dead_code)]
+    {
+        struct Point<T, U> {
+            x: T,
+            y: U,
+        }
+
+        let _p = Point {
+            x: 32,
+            y: "hello".to_string(),
+        };
+    }
+
+    // generic struct with method return value reference
+    {
+        struct Val<T> {
+            val: T,
+        }
+
+        impl<T> Val<T> {
+            fn value(&self) -> &T {
+                &self.val
+            }
+        }
+
+        let i = Val { val: 42 };
+        let s = Val {
+            val: "hello".to_string(),
+        };
+
+        assert_eq!(*i.value(), 42);
+        assert_eq!(s.value(), "hello");
+    }
+
+    // generic struct with method that has generic type parameters
+    {
+        struct Point<T, U> {
+            x: T,
+            y: U,
+        }
+
+        impl<T, U> Point<T, U> {
+            fn mixup<V, W>(self, other: Point<V, W>) -> Point<T, W> {
+                Point {
+                    x: self.x,
+                    y: other.y,
+                }
+            }
+        }
+
+        let p1 = Point { x: 1, y: 2 };
+        let p2 = Point {
+            x: "hello",
+            y: '中',
+        };
+
+        let p3 = p1.mixup(p2);
+        assert_eq!(p3.x, 1);
+        assert_eq!(p3.y, '中');
+    }
+
+    // generic struct with specified type implementation
+    {
+        struct Point<T> {
+            x: T,
+            y: T,
+        }
+
+        impl Point<f64> {
+            fn distance_from_origin(&self) -> f64 {
+                (self.x.powi(2) + self.y.powi(2)).sqrt()
+            }
+        }
+
+        let p = Point { x: 3.0, y: 4.0 };
+        assert_eq!(p.distance_from_origin(), 5.0);
+    }
 }
