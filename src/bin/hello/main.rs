@@ -1761,8 +1761,8 @@ fn main() {
             }
         }
 
-        fn new_animal(s: &str) -> &dyn Animal {
-            match s {
+        fn new_animal(species: &str) -> &dyn Animal {
+            match species {
                 "sheep" => &Sheep,
                 "cow" => &Cow,
                 _ => panic!("unknown animal"),
@@ -1863,5 +1863,87 @@ fn main() {
 
         let pair = Pair::new(Unit(3.4), Unit(4.3));
         pair.cmp_display();
+    }
+
+    // trait with associated type, std::ops::Add is a example
+    {
+        trait Union<Rhs> {
+            type Output;
+            fn union(&self, rhs: &Rhs) -> Self::Output;
+        }
+
+        #[derive(Debug)]
+        struct Point<T>(T, T);
+        #[derive(Debug, PartialEq)]
+        struct MixedPoint<T, U>(T, U, T, U);
+
+        impl<T: Copy, U: Copy> Union<Point<U>> for Point<T> {
+            type Output = MixedPoint<T, U>;
+
+            fn union(&self, rhs: &Point<U>) -> Self::Output {
+                MixedPoint(self.0, rhs.0, self.1, rhs.1)
+            }
+        }
+
+        let p = Point(1, 2);
+        let q = Point('a', 'b');
+        let r = p.union(&q);
+        assert_eq!(r, MixedPoint(1, 'a', 2, 'b'));
+    }
+
+    // implements trait for built-in type, with &dyn, Box<dyn > and static dispatch generic
+    {
+        trait Draw {
+            fn draw(&self) -> String;
+        }
+
+        impl Draw for i8 {
+            fn draw(&self) -> String {
+                format!("i8: {}", self)
+            }
+        }
+
+        impl Draw for f32 {
+            fn draw(&self) -> String {
+                format!("f32: {}", self)
+            }
+        }
+
+        fn draw_with_ref(d: &dyn Draw) {
+            println!("{}", d.draw());
+        }
+
+        fn draw_with_box(d: Box<dyn Draw>) {
+            println!("{}", d.draw())
+        }
+
+        let x = 42_i8;
+        draw_with_ref(&x);
+
+        let y = 3.2_f32;
+        draw_with_box(Box::new(y));
+
+        fn draw_with_static_generic<T: Draw>(d: T) {
+            println!("{}", d.draw())
+        }
+        draw_with_static_generic(y);
+    }
+
+    // Object-safe trait:
+    //   - The return type isn't self.
+    //   - There are no generic type parameters.
+    #[allow(dead_code)]
+    {
+        trait SelfUnsafeTrait {
+            fn f(&self) -> Self;
+        }
+
+        trait GenericUnsafeTrait<T> {
+            fn f(&self) -> T;
+        }
+        trait ObjectSaveTrait {
+            fn f(&self) -> &dyn ObjectSaveTrait;
+            fn b(&self) -> Box<dyn ObjectSaveTrait>;
+        }
     }
 }
