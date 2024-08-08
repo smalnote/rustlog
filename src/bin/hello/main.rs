@@ -419,6 +419,15 @@ fn main() {
         assert_eq!(s, "hello world!");
     }
 
+    // cannot borrow mutable value from immutable value
+    /*
+    {
+        let v = 42; // immutable value
+        let w = &mut v; // invalid mutable borrowing
+        assert_eq!(v, *w);
+    }
+    */
+
     // print pointer address of reference
     {
         let s = String::from("hello");
@@ -1475,5 +1484,25 @@ fn main() {
 
         let p = Point { x: 3.0, y: 4.0 };
         assert_eq!(p.distance_from_origin(), 5.0);
+    }
+
+    // array element type and length is part of array type
+    {
+        #[allow(dead_code)]
+        struct Array<T, const N: usize> {
+            data: [T; N],
+        }
+
+        let _a: Array<i32, 3> = Array { data: [1, 2, 3] };
+        let _b = Array::<u32, 3> { data: [1, 2, 3] };
+        let _c = Array::<u32, 10> {
+            data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
+        };
+
+        let _arrays: [Array<i32, 3>; 3] = [
+            Array { data: [1, 2, 3] },
+            Array { data: [1, 2, 3] },
+            Array { data: [1, 2, 3] },
+        ];
     }
 }
