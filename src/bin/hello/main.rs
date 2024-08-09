@@ -3,6 +3,7 @@ use std::ops::{Range, RangeInclusive};
 use rand::Rng;
 use std::fmt::Debug;
 use time::OffsetDateTime;
+use utf8_slice;
 
 fn main() {
     fn add(a: i32, b: i32) -> i32 {
@@ -537,6 +538,49 @@ fn main() {
         for c in s1.chars() {
             println!("{}", c);
         }
+    }
+
+    // index string chars with utf8_slice::slice()
+    {
+        let s = "The 🚀 goes to the 🌑!";
+        let rocket = utf8_slice::slice(s, 4, 5);
+        assert_eq!(rocket, "🚀");
+    }
+
+    // String is a Vec<u8> that guarantee to be valid utf-8 sqeuences
+    {
+        let mut s = String::new();
+        s.push_str("hello");
+        let v: Vec<u8> = vec![104, 101, 108, 108, 111];
+        let v = String::from_utf8(v).expect("invalid utf-8 sequences");
+        assert_eq!(s, v);
+    }
+
+    // String is made up of three components: pointer to heap memory, length in bytes of content, capacity in bytes of memory
+    // A String's capacity grows automatically to acommodate its length.
+    {
+        let mut s = String::with_capacity(5);
+
+        println!("s = {}, capacity = {}", &s, s.capacity());
+        for _ in 0..2 {
+            s.push_str("hello");
+            println!("s = {}, capacity = {}", &s, s.capacity());
+        }
+    }
+
+    // Manually manage String memory and rebuild String from pointer, lenght and capacity.
+    {
+        let story = "The 🚀 goes to the 🌑!".to_string();
+
+        let mut s = std::mem::ManuallyDrop::new(story);
+
+        let ptr = s.as_mut_ptr();
+        let len = s.len();
+        let cap = s.capacity();
+
+        let raw_story = unsafe { String::from_raw_parts(ptr, len, cap) };
+
+        assert_eq!(*s, raw_story);
     }
 
     // array literal
