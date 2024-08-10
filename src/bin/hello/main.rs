@@ -2030,12 +2030,15 @@ fn main() {
     // array or slice -> vector
     {
         let arr = [1, 2, 3];
+        let slice = &arr;
         let v1 = Vec::from(arr);
-        let v2 = Vec::from(&arr[..]);
+        let v2 = Vec::from(slice);
         let mut v3: Vec<i32> = arr.to_vec();
+        let v4: Vec<i32> = arr.into();
 
         assert_eq!(v1, v2);
         assert_eq!(v1, v3);
+        assert_eq!(v1, v4);
 
         // vector is a copy of arrry
         v3[2] = 6;
@@ -2090,10 +2093,9 @@ fn main() {
         }
 
         for i in 0..5 {
-            if i < v.len() {
-                v[i] = i + 2;
-            } else {
-                v.push(i + 2);
+            match v.get(i) {
+                Some(e) => v[i] = e + 1,
+                None => v.push(i + 2),
             }
         }
 
