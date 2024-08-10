@@ -18,3 +18,4 @@ path = "src/bin/guess/main.rs"
 time = { version = "^0.3", features = ["local-offset"] }
 rand = "^0.8"
 utf8_slice = "1.0.0"
+twox-hash = "^1.6"

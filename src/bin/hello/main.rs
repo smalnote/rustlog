@@ -1,12 +1,13 @@
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
-    hash::{Hash, Hasher},
+    hash::{BuildHasherDefault, Hash, Hasher},
     ops::{Range, RangeInclusive},
 };
 
 use rand::Rng;
 use std::fmt::Debug;
 use time::OffsetDateTime;
+use twox_hash::XxHash64;
 use utf8_slice;
 
 fn main() {
@@ -2294,5 +2295,81 @@ fn main() {
                 hash(&viking)
             );
         }
+    }
+
+    // HashMap capacity
+    {
+        let mut m = HashMap::<i32, i32>::with_capacity(5);
+
+        let mut cap = m.capacity();
+
+        println!("len = {}, cap = {}", m.len(), m.capacity());
+        for i in 0..70 {
+            m.insert(i, i);
+            if m.capacity() != cap {
+                cap = m.capacity();
+                println!("len = {}, cap = {}", m.len(), m.capacity());
+            }
+        }
+        m.shrink_to(50);
+        println!(
+            "len = {}, shrink_to = {}, cap = {}",
+            m.len(),
+            50,
+            m.capacity()
+        );
+    }
+
+    /*
+     * Ownership of HashMap
+     * For types that implement the Copy trait, like i32, the values are copied into HashMap.
+     * For owned values like String, the values will be moved and HashMap will be the owner of
+     * those values.
+     */
+    #[allow(unused_mut)]
+    {
+        // Values of type i32 are copied into HashMap
+        let mut numbers = HashMap::<i32, i32>::new();
+        let mut n = 42;
+        numbers.insert(n, n);
+        n *= 2; // i32 still usable after insert
+        for (k, v) in numbers {
+            println!("n = {}, k = {}, v = {}", n, k, v,);
+            assert_ne!(n, v);
+        }
+
+        // Values of type String are moved into HashMap
+        let mut strings = HashMap::<String, String>::new();
+        let mut k = "country".to_string();
+        let mut v = "China".to_string();
+        strings.insert(k, v);
+        // error: value borrowed after move
+        // k.push('1');
+        // v.push('1');
+
+        // Unlike String, &str is copied into HashMap
+        let mut strs = HashMap::<&str, &str>::new();
+        let mut sk = "name";
+        let mut sv = "Olaf";
+        strs.insert(sk, sv);
+        sk = "age";
+        sv = "28";
+        for (k, v) in strs {
+            println!("sk = {}, sv = {}, k = {}, v = {}", sk, sv, k, v);
+            assert_ne!(sk, k);
+            assert_ne!(sv, v);
+        }
+    }
+
+    // Third-party Hash libs
+    {
+        let mut map: HashMap<&str, &str, BuildHasherDefault<XxHash64>> = Default::default();
+        map.insert("version", "alpha");
+        assert_eq!(map.get("version"), Some(&"alpha"));
+
+        type BuildXxHash64 = BuildHasherDefault<XxHash64>;
+        let mut map = HashMap::<u32, i32, BuildXxHash64>::with_hasher(BuildXxHash64::default());
+        map.insert(42, 42);
+        assert_eq!(map.get(&42), Some(&42));
     }
 }
