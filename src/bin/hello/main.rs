@@ -1,4 +1,8 @@
-use std::ops::{Range, RangeInclusive};
+use std::{
+    collections::{hash_map::DefaultHasher, HashMap},
+    hash::{Hash, Hasher},
+    ops::{Range, RangeInclusive},
+};
 
 use rand::Rng;
 use std::fmt::Debug;
@@ -2178,6 +2182,117 @@ fn main() {
         ];
         for v in formatables {
             println!("{}", v);
+        }
+    }
+
+    // HashMap<&str, i32>
+    {
+        let mut scores: HashMap<&str, i32> = HashMap::new();
+        scores.insert("Sunface", 98);
+        scores.insert("Daniel", 95);
+        scores.insert("Ashley", 69);
+        scores.insert("Katie", 58);
+
+        let score = scores.get("Katie"); // access by method `get`
+        assert_eq!(score, Some(&58_i32));
+
+        if scores.contains_key("Ashley") {
+            let score = scores["Ashley"]; // access by brackets
+            assert_eq!(score, 69);
+            scores.remove("Ashley");
+        }
+
+        assert_eq!(scores.len(), 3);
+
+        for (name, score) in scores {
+            println!("The score of {} is {}", name, score);
+        }
+    }
+
+    // array of tuples to HashMap
+    {
+        let teams: [(&str, i32); 3] = [
+            ("Chinese Team", 100),
+            ("American Team", 10),
+            ("France Team", 50),
+        ];
+
+        let m1 = HashMap::<&str, i32>::from(teams);
+        let m2: HashMap<&str, i32> = teams.into_iter().collect();
+
+        assert_eq!(m1, m2);
+    }
+
+    // HashMap entry
+    {
+        let mut player_stats = HashMap::new();
+
+        player_stats.entry("health").or_insert(100);
+        assert_eq!(player_stats["health"], 100);
+
+        // insert with a pointer to a function
+        fn random_stat() -> u8 {
+            42
+        }
+        player_stats.entry("health").or_insert_with(random_stat);
+        assert_eq!(player_stats["health"], 100);
+
+        // .entry().or_insert() return a mutable reference to the value
+        let health: &mut u8 = player_stats.entry("health").or_insert(50);
+        assert_eq!(*health, 100);
+        *health -= 50;
+        assert_eq!(player_stats["health"], 50);
+    }
+
+    /*
+     * Requirements of HashMap key
+     * Any type taht implements the Eq and Hash traits can be a key in HashMap. This include:
+     *   - bool
+     *   - int, uint, and all variations thereof
+     *   - String and &str (tips: you can have a HashMap keyed by String and call .get() with an &str)
+     *
+     * Note: f32 and f64 do not implement Hash, likely because floating-point precesion erros would make
+     * using the as hashmap keys horribly error-prone.
+     *
+     * Note: All collection classes implement Eq and Hash if there contained type also respectively
+     * implements Eq and Hash.
+     * For example, Vec<T> implements Hash if the contained type T implements Hash.
+     */
+    {
+        #[derive(Debug, Hash, PartialEq, Eq)]
+        struct Viking {
+            name: String,
+            country: String,
+        }
+
+        impl Viking {
+            fn new(name: &str, country: &str) -> Self {
+                Viking {
+                    name: name.to_string(),
+                    country: country.to_string(),
+                }
+            }
+        }
+
+        let vikings = HashMap::from([
+            (Viking::new("Olaf", "Norway"), 25),
+            (Viking::new("Olaf", "Denmark"), 4),
+            (Viking::new("Harald", "Denmark"), 12),
+        ]);
+
+        fn hash<T: Hash>(t: &T) -> u64 {
+            let mut hasher = DefaultHasher::new();
+            t.hash(&mut hasher);
+            hasher.finish()
+        }
+
+        for (viking, age) in vikings {
+            println!(
+                "Viking: {:?}, age: {}, hash: {}",
+                viking,
+                age,
+                hash(&viking)
+            );
         }
     }
 }
