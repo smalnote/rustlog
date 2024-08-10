@@ -2032,10 +2032,14 @@ fn main() {
         let arr = [1, 2, 3];
         let v1 = Vec::from(arr);
         let v2 = Vec::from(&arr[..]);
-        let v3: Vec<i32> = arr.to_vec();
+        let mut v3: Vec<i32> = arr.to_vec();
 
         assert_eq!(v1, v2);
         assert_eq!(v1, v3);
+
+        // vector is a copy of arrry
+        v3[2] = 6;
+        assert_ne!(arr[2], v3[2]);
     }
 
     // String -> Vec
