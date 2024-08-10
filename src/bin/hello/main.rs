@@ -2367,9 +2367,106 @@ fn main() {
         map.insert("version", "alpha");
         assert_eq!(map.get("version"), Some(&"alpha"));
 
+        // Default::default() <==> HashMap::default()
+        // HashMap implements trait Default
+        let mut map: HashMap<&str, &str, BuildHasherDefault<XxHash64>> = HashMap::default();
+        map.insert("version", "alpha");
+        assert_eq!(map.get("version"), Some(&"alpha"));
+
+        // HashMap::default() <==> HashMap::with_hasher(BuildHasherDefault::default())
+        // HashMap implements trait Default: HashMap::with_hasher(Default::default())
+        // Where the `Default::default()` is inference to BuildHasherDefault<XxHash64>'s Default trait implementation
+        // Where inference to XxHash64's Default trait implementation
+        let mut map: HashMap<&str, &str, BuildHasherDefault<XxHash64>> =
+            HashMap::with_hasher(BuildHasherDefault::default());
+        map.insert("version", "alpha");
+        assert_eq!(map.get("version"), Some(&"alpha"));
+
+        // Creates hasher with generic(type XxHash64) associated function(default).
+        // Use ::<type> to specify type of generic associated function.
+        let hasher = BuildHasherDefault::<XxHash64>::default();
+        let mut map = HashMap::<u32, i32, BuildHasherDefault<XxHash64>>::with_hasher(hasher);
+        map.insert(42, 42);
+        assert_eq!(map.get(&42), Some(&42));
+
+        // Defines type alias for short.
         type BuildXxHash64 = BuildHasherDefault<XxHash64>;
+        // BuildXxHash64::default() <==> BuildHasherDefault::<XxHash64>>::default()
         let mut map = HashMap::<u32, i32, BuildXxHash64>::with_hasher(BuildXxHash64::default());
         map.insert(42, 42);
         assert_eq!(map.get(&42), Some(&42));
+    }
+
+    // Default trait
+    {
+        #[derive(Debug, PartialEq)]
+        struct Point<T> {
+            x: T,
+            y: T,
+        }
+
+        impl Default for Point<i32> {
+            fn default() -> Point<i32> {
+                Point {
+                    x: 42_i32,
+                    y: 42_i32,
+                }
+            }
+        }
+
+        impl<T: std::fmt::Display> std::fmt::Display for Point<T> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "Point {{ x: {}, y: {} }}", self.x, self.y)
+            }
+        }
+
+        let point = Point { x: 42, y: 42 };
+
+        // Default::default() inference type from `Point<i32>`
+        let default_point_1: Point<i32> = Default::default();
+        // Point::default() inference generic type i32 from `Point<i32>`
+        let default_point_2: Point<i32> = Point::default();
+        // specifiy type Point<i32>'s default function
+        type PointI32 = Point<i32>;
+        let default_point_3 = PointI32::default();
+        let default_point_4 = Point::<i32>::default();
+        assert_eq!(point, default_point_1);
+        assert_eq!(point, default_point_2);
+        assert_eq!(point, default_point_3);
+        assert_eq!(point, default_point_4);
+        println!(
+            "point = {}, default 1 = {}, default 2 = {}, default 3 = {}, default 4 = {}",
+            point, default_point_1, default_point_2, default_point_3, default_point_4
+        );
+    }
+
+    // Implements trait default of generic type
+    #[allow(dead_code)]
+    {
+        struct Pump<H> {
+            h: H,
+        }
+
+        impl<H: Default> Default for Pump<H> {
+            fn default() -> Self {
+                Pump { h: H::default() }
+            }
+        }
+
+        let _p: Pump<BuildHasherDefault<XxHash64>> = Default::default();
+        let _p: Pump<BuildHasherDefault<XxHash64>> = Pump::default();
+        let _p = Pump::<BuildHasherDefault<XxHash64>>::default();
+        type BuildXxHash64 = BuildHasherDefault<XxHash64>;
+        let _p = Pump::<BuildXxHash64>::default();
+
+        impl<H> From<H> for Pump<H> {
+            fn from(h: H) -> Pump<H> {
+                Pump { h }
+            }
+        }
+        // Inference From::from() of type Pump<&str>
+        let _p: Pump<&str> = From::from("trait");
+        let _p = Pump::<&str>::from("type");
+        let _p = <Pump<&str> as From<&str>>::from("from");
     }
 }
