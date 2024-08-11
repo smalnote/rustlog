@@ -7,3 +7,5 @@ pub mod restaurant2;
 // file: src/restaurant.rs
 // make module available in src/bin/*, src/main.rs
 pub mod restaurant;
+
+pub mod practice;
