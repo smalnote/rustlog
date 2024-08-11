@@ -6,3 +6,6 @@ run_hello:
 
 run_guess:
 	cargo run --bin guess
+
+run_rustlog:
+	cargo run --bin rustlog
