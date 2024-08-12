@@ -16,4 +16,5 @@ pub mod p150_default_trait;
 pub mod p160_type_coercion;
 pub mod p170_from_into_trait;
 pub mod p180_trait_generic_implementation;
+pub mod p190_mod_tests_use_parent;
 pub mod p200_trait_display;
