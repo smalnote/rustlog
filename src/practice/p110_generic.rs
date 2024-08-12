@@ -308,13 +308,29 @@ mod tests {
         fn bark(animal: &impl Animal) {
             println!("barking: {}", animal.sound());
         }
-
         bark(&Sheep);
+        bark(&Cow);
 
         fn bark_both<T: Animal>(a: &T, b: &T) {
             println!("barking both: {}, {}", a.sound(), b.sound());
         }
-
         bark_both(&Cow, &Cow);
+
+        fn bark_all(a: &impl Animal, b: &impl Animal) {
+            println!("barking both: {}, {}", a.sound(), b.sound());
+        }
+        bark_all(&Cow, &Sheep);
+
+        fn bark_four(four_animals: &[&dyn Animal; 4]) {
+            let [a, b, c, d] = four_animals;
+            println!(
+                "barking four: {}, {}, {}, {}",
+                a.sound(),
+                b.sound(),
+                c.sound(),
+                d.sound()
+            );
+        }
+        bark_four(&[&Cow, &Sheep, &Cow, &Sheep])
     }
 }
