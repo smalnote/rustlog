@@ -14,3 +14,4 @@ pub mod p130_vector;
 pub mod p140_hashmap;
 pub mod p150_default_trait;
 pub mod p160_type_coercion;
+pub mod p200_trait_display;
