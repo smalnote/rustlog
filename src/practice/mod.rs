@@ -1,3 +1,4 @@
+pub mod p000_crate;
 pub mod p010_basics;
 pub mod p020_ownership;
 pub mod p030_flow_control;

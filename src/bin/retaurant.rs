@@ -1,10 +1,4 @@
-// file: src/main.rs binary crate of project rustlog
-
-// make module available in current binary crate
-// equivalent to `pub mod restaurant;` in src/lib.rs
-pub mod restaurant;
-
-// Run with command: cargo run --bin rustlog
+// Run this binary crate with command: cargo run --bin restaurant
 fn main() {
     // hierachy version of mod restaurant in directory src/restaurant/*
     rustlog::restaurant::front_of_house::hosting::add_to_waitlist();
