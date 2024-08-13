@@ -6,6 +6,11 @@ description = "Rust language experimental playground."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[profile.release]
+# Abort the program immediately if panic, without unwinding call stack, cleaning up.
+# Make the resulting binary as small as possible.
+panic = "abort"
+
 [[bin]]
 name = "hello"
 path = "src/bin/hello/main.rs"
