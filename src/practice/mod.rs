@@ -21,3 +21,4 @@ pub mod p190_mod_tests_use_parent;
 pub mod p200_trait_display;
 pub mod p210_panic;
 pub mod p220_result;
+pub mod p230_printing;
