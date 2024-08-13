@@ -22,3 +22,4 @@ pub mod p200_trait_display;
 pub mod p210_panic;
 pub mod p220_result;
 pub mod p230_printing;
+pub mod p240_lifetimes;
