@@ -24,3 +24,4 @@ pub mod p220_result;
 pub mod p230_printing;
 pub mod p240_lifetimes;
 pub mod p250_static_lifetime;
+pub mod p260_closures;
