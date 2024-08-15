@@ -305,10 +305,38 @@ mod tests {
             }
         }
 
+        fn bark_t<T: Animal>(animal: &T) {
+            println!("barking: {}", animal.sound());
+        }
+
+        /*
+         * Syntax `impl Trait` is syntactic sugar for generic function with a trait bound.
+         * `t: impl Trait` is equivalent to <T: Trait> (t: T) and is static dispatch.
+         * By means static dispatch, the Rust compiler will generate a concrete type version
+         * when a function call occurs for a concrete type.
+         * For example:
+         *   for function:
+         *     fn bark(animal: &impl Animal)
+         *   at compile time, Rust compiler will generate concrete function for type Sheep and type Cow:
+         *     fn bark(animal: &Sheep)
+         *     fn bark(animal: &Cow)
+         *   Just like concrete version of fn bark<T: Animal>(animal: &T) -> fn bark(animal: &Sheep)
+         *
+         * In contrast to static dispatch, `dyn Trait` is for dynamic dispatch:
+         *   for function:
+         *     fn bark(animal: &dyn Animal)
+         *   at runtime, call of this function with &Sheep and &Cow, besides of reference of value, it will carry
+         *   a dynamic pointer to the concrete type, so that it can decide to call method of which type.
+         *     for: let s = Sheep;
+         *     calling: bark(&s)
+         *     will carry a reference to `s` and a pointer to type Sheep, so it knows to use type Sheep's impl for trait Animal.
+         *
+         * In short: `impl Trait` is a trait bound for generic, `dyn Trait` is a trait object for allowing dynamic dispatch.
+         */
         fn bark(animal: &impl Animal) {
             println!("barking: {}", animal.sound());
         }
-        bark(&Sheep);
+        bark_t(&Sheep);
         bark(&Cow);
 
         fn bark_both<T: Animal>(a: &T, b: &T) {
