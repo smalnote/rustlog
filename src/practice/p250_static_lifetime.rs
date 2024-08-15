@@ -184,6 +184,37 @@ mod tests {
             println!("{}", t);
         }
 
+        /*
+         * The key difference of functions below is that a static T or a static &T
+         * is required by them.
+         * Here variable `string` is `static`, so `&string` comfort with the following functions:
+         *   - fn print_a<T: Display + 'static>(t: &T)
+         *   - fn print_b<T>(t: &T) where T: Display + 'static (This is just a syntax sugar of the first one)
+         *   - fn print_e(t: &(dyn Display + 'static))
+         *   - fn print_f(t: &(impl Display + 'static))
+         * These functions all require `a reference of static variable(comfort trait bound Display)`
+         *
+         * Variable `string` is static, but reference of it `&string` has a limited lifetime in current scope,
+         * so `&string`(reference of static) won't comfort the following functions:
+         *   - fn print_c(t: &'static dyn Display)
+         *   - fn print_d(t: &'static impl Display)
+         *   - fn print_g(t: &'static String)
+         * These functions all require `a static reference`.
+         *
+         * Note: `&impl Display` is a syntactic sugar fo `<T: Display>(_: &T)`, it's a generic function and static dispatch,
+         * but `&dyn Display` is dynamic dispatch, not generic function, it will carry reference value and a pointer to concrete type(dyn).
+         * In short: `impl Trait` is a trait bound for generic, `dyn Trait` is a trait object for allowing dynamic dispatch.
+         *
+         * A static reference: `&'static dyn Display`
+         * A reference of static: `&(dyn Display + 'static)`
+         *
+         * To acquire a `static reference` of `static variable`, use Box::leak()
+         *   - let static_ref_string: &'static mut String = Box::leak(Box::new(string.clone()));
+         *
+         * Note: Lifetime is constraint for reference(borrowing) parameter, so
+         * all functions have a reference type parameter.
+         */
+
         let mut string = "First".to_owned();
         string.push_str(string.to_uppercase().as_str());
 
@@ -195,12 +226,11 @@ mod tests {
         print_b(&string);
 
         // fn print_c(t: &'static dyn Display)
-        let dyn_str: &dyn Display = Box::leak(Box::new(string.clone()));
-        print_c(dyn_str); // Compilation error
+        let static_ref_string: &'static mut String = Box::leak(Box::new(string.clone()));
+        print_c(static_ref_string); // Compilation error
 
-        let static_str = Box::leak(Box::new(string.clone()));
         // fn print_d(t: &'static impl Display)
-        print_d(static_str); // Compilation error
+        print_d(static_ref_string); // Compilation error
 
         // fn print_e(t: &(dyn Display + 'static))
         print_e(&string);
@@ -208,6 +238,6 @@ mod tests {
         print_f(&string);
 
         // print_g(t: &'static String)
-        print_g(static_str); // Compilation error
+        print_g(static_ref_string); // Compilation error
     }
 }
