@@ -163,13 +163,45 @@ mod tests {
     #[test]
     fn implement_linked_lit_via_enum() {
         #[derive(Debug)]
-        #[allow(dead_code)]
-        enum List {
-            Cons(i32, Box<List>),
-            Nil,
+        enum List<T> {
+            Cons(T, Box<List<T>>),
+            None,
         }
 
-        let list = List::Cons(1, Box::new(List::Cons(2, Box::new(List::Nil))));
-        println!("{:?}", list);
+        impl<T> List<T> {
+            fn new() -> List<T> {
+                List::None
+            }
+
+            fn prepend(self, elem: T) -> List<T> {
+                List::Cons(elem, Box::new(self))
+            }
+
+            fn len(&self) -> u32 {
+                match *self {
+                    List::Cons(_, ref tail) => tail.len() + 1,
+                    List::None => 0,
+                }
+            }
+        }
+
+        impl<T: std::fmt::Display> List<T> {
+            fn stringify(&self) -> String {
+                match *self {
+                    List::Cons(ref head, ref tail) => {
+                        format!("{} -> {}", head, tail.stringify())
+                    }
+                    List::None => "None".to_owned(),
+                }
+            }
+        }
+
+        let mut list = List::<f32>::new();
+        list = list.prepend(3.14);
+        list = list.prepend(4.48);
+        list = list.prepend(1.67);
+        assert_eq!(list.stringify(), "1.67 -> 4.48 -> 3.14 -> None");
+        assert_eq!(list.len(), 3);
+        println!("{}", list.stringify());
     }
 }
