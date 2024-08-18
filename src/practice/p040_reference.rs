@@ -29,7 +29,7 @@ mod tests {
 
     // use ref for pattern matching
     #[test]
-    fn use_reference_in_pattern_matching_for_borrowing() {
+    fn use_reference_within_matching_arm_for_borrowing() {
         let maybe_name: Option<String> = Some(String::from("alice"));
         match maybe_name {
             // ref here just borrow the value, not move ownership

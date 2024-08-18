@@ -183,6 +183,21 @@ mod tests {
                     List::None => 0,
                 }
             }
+
+            fn awkward_len(&mut self) -> u32 {
+                let mut node = self;
+                let mut size = 0_u32;
+                loop {
+                    match node {
+                        &mut List::Cons(_, ref mut next) => {
+                            size += 1;
+                            node = &mut **next;
+                        }
+                        &mut List::None => break,
+                    }
+                }
+                size
+            }
         }
 
         impl<T: std::fmt::Display> List<T> {
@@ -202,6 +217,7 @@ mod tests {
         list = list.prepend(1.67);
         assert_eq!(list.stringify(), "1.67 -> 4.48 -> 3.14 -> None");
         assert_eq!(list.len(), 3);
+        assert_eq!(list.awkward_len(), 3);
         println!("{}", list.stringify());
     }
 }

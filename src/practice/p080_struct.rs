@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    // struct is compund type with named fields with different types
+    // struct is compound type with named fields of different types
     #[test]
     fn struct_is_compund_type_with_named_fields_of_difference_type() {
         struct User {
@@ -23,9 +23,9 @@ mod tests {
         assert_eq!(member.email, member_new.email);
     }
 
-    // copy struct with spread syntax
+    // assign struct with spread syntax
     #[test]
-    fn copy_struct_with_spread_syntax() {
+    fn assign_struct_with_spread_syntax() {
         struct User {
             name: String,
             age: u8,
@@ -68,7 +68,7 @@ mod tests {
         let user1: User = new_user(String::from("Alice"), 31, String::from("alice@example.com"));
         assert_eq!(
             std::mem::size_of_val(&user1),
-            std::mem::size_of_val(&user1.name) // String 8bytes * 3
+            std::mem::size_of_val(&user1.name) // String 8bytes * 3, on aarch64
                 + std::mem::size_of_val(&user1.age) // u8 1byte
                 + 7 // alignment padding
                 + std::mem::size_of_val(&user1.email) // String 8bytes * 3
@@ -125,14 +125,18 @@ mod tests {
         let alice: User = User {
             name: String::from("Alice"),
         };
-        let origin: Point = Point(0, 0, 0);
-        let empty: Empty = Empty;
-        let empty_tuple: EmptyTuple = EmptyTuple();
+        // struct is zero-cost abstraction
         assert_eq!(std::mem::size_of_val(&alice), std::mem::size_of::<String>());
+
+        let origin: Point = Point(0, 0, 0);
         assert_eq!(
             std::mem::size_of_val(&origin),
             3 * std::mem::size_of::<i32>()
         );
+
+        let empty: Empty = Empty;
+        let empty_tuple: EmptyTuple = EmptyTuple();
+
         assert_eq!(std::mem::size_of_val(&empty), 0);
         assert_eq!(std::mem::size_of_val(&empty_tuple), 0);
 

@@ -13,9 +13,9 @@ mod tests {
 
     // init array with same value
     #[test]
-    fn init_array_with_samve_value() {
-        let arr: [i32; 5] = [0; 5];
-        assert_eq!(arr, [0, 0, 0, 0, 0]);
+    fn init_array_with_same_value() {
+        let arr: [i32; 5] = [42; 5];
+        assert_eq!(arr, [42, 42, 42, 42, 42]);
     }
 
     // get array element by get
@@ -26,15 +26,18 @@ mod tests {
         assert_eq!(*third, 3);
     }
 
-    // slice if type of &[T]
+    // slice is type of &[T]
+    // slice is a immutable view of array
     #[test]
     fn slice_if_readonly_ref_of_array() {
         let arr: [i32; 5] = [0, 1, 2, 3, 4];
-        let slice: &[i32] = &arr;
+        let slice: &[i32] = &arr; // take the whole array, equivalent to &arr[..];
         assert_eq!(slice.len(), 5);
         assert_eq!(slice[3], 3);
         let first_three: &[i32] = &arr[..3];
         assert_eq!(first_three, [0, 1, 2]);
+        let last_two = &arr[arr.len() - 2..];
+        assert_eq!(last_two, [3, 4]);
         // slice has ptr and len, size_of_val is 2 * size_of<usize>
         assert_eq!(
             std::mem::size_of_val(&first_three),

@@ -11,9 +11,9 @@ mod tests {
 
     // tuple up to 12 elements can be print
     #[test]
-    fn println_can_handle_tuple_with_up_to_12_element() {
-        let twelve_tuple = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, "twelve");
-        println!("{:?}", twelve_tuple);
+    fn println_can_handle_tuple_with_up_to_12_elements() {
+        let twelve = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, "twelve");
+        println!("{:?}", twelve);
     }
 
     // tuple destructuring
@@ -32,5 +32,11 @@ mod tests {
         }
         let t: (i32, i32) = (1, 2);
         assert_eq!(sum_multiply(t), (3, 2));
+
+        fn sum_multiply_destruct((a, b): (i32, i32)) -> (i32, i32) {
+            (a + b, a * b)
+        }
+        let q = (3, 4);
+        assert_eq!(sum_multiply_destruct(q), (7, 12));
     }
 }

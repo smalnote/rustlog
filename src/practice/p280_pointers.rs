@@ -126,6 +126,24 @@ mod tests {
         // *ptr(d1) goes out of scope, ("d2", 0x2) is dropped
     }
 
+    #[test]
+    fn variable_shadowing_does_not_drop_old_value() {
+        struct Droppable<'a>(&'a str);
+
+        impl Drop for Droppable<'_> {
+            fn drop(&mut self) {
+                println!("{}.drop()", self.0);
+            }
+        }
+
+        let _d = Droppable("d1");
+        let ref_d1 = &_d;
+        println!("before shadowing");
+        let _d = 42_i32;
+        println!("after shadowing");
+        println!("ref of shadowed value = {}", ref_d1.0);
+    }
+
     // Null pointer optimization: https://doc.rust-lang.org/std/option/index.html#representation
     // Thanks to the `null pointer optimization` for Option<T>, NonNull<T> and Option<NonNull<T>>
     // are guaranteed to have the same size and alignment.
