@@ -59,8 +59,10 @@ mod tests {
     }
 
     // matches! macro
+    // `==` requires Type implements trait PartialEq
+    // while `matches!` not, and is more powerful
     #[test]
-    fn matches_marcro_for_range() {
+    fn matches_marco_for_range() {
         let alphabets = ['a', 'b', 'c', 'd', 'e', '0', 'A', 'L'];
 
         // for-in [char; 8] array is copy of primary type
@@ -108,12 +110,13 @@ mod tests {
             Qux(u32),
         }
 
-        let foos = [Foo::Bar, Foo::Baz, Foo::Qux(42)];
+        let foos = [Foo::Bar, Foo::Baz, Foo::Qux(42), Foo::Qux(100)];
         for foo in foos.iter() {
             match foo {
                 Foo::Bar => println!("Bar"), // Foo::Bar as u8 is invalid here
                 Foo::Baz => println!("Baz"), // Foo::Baz as u8 is invalid here
-                Foo::Qux(n) => println!("Qux({n})"),
+                Foo::Qux(_n @ ..100) => println!("small Qux"),
+                Foo::Qux(_n @ 100..) => println!("large Qux"),
             }
         }
     }
@@ -152,9 +155,10 @@ mod tests {
         match p {
             Point { x, y: 0 } => println!("Ont the x axis at x = {x}"),
             Point {
-                x: newx @ 0..=5,
+                // rename x with new_x
+                x: new_x @ 0..=5,
                 y: y @ (10 | 20 | 30),
-            } => println!("On the y axis at y = {y}, x = {newx}"),
+            } => println!("On the y axis at y = {y}, x = {new_x}"),
             Point { x, y } => println!("x = {x}, y = {y}"),
         }
     }
@@ -180,8 +184,8 @@ mod tests {
         match msg {
             Message::Hello { id: id @ 3..=7 } => println!("Found and id in range [3, 7]: {id}"),
             Message::Hello {
-                id: newid @ (42 | 53 | 67),
-            } => println!("Found specific id {newid}"),
+                id: new_id @ (42 | 53 | 67),
+            } => println!("Found specific id {}", new_id),
             Message::Hello { id } => println!("Found some other id: {id}"),
         }
     }

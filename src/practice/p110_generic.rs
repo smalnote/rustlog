@@ -15,7 +15,7 @@ mod tests {
                 Rectangle { width, height }
             }
 
-            // use `Self` as synoym of struct
+            // use `Self` as synonym of struct Rectangle
             fn square(size: u32) -> Self {
                 Self {
                     width: size,
@@ -28,10 +28,10 @@ mod tests {
                 self.width * self.height
             }
 
-            // paramter `self` move ownership of instance
+            // parameter `self` move ownership of instance
             fn clear(self) {}
 
-            // paramter `&mut self` borrow mutable instance
+            // parameter `&mut self` borrow mutable instance
             fn rotate(&mut self) {
                 let w: u32 = self.width;
                 self.width = self.height;
@@ -44,7 +44,7 @@ mod tests {
                 self.height = (self.height as f32 * ratio) as u32;
             }
 
-            // canonical form of self paramter
+            // canonical form of self parameter
             fn normalize(self: &mut Self) {
                 if self.width > self.height {
                     self.height = self.width
@@ -100,7 +100,7 @@ mod tests {
         assert_eq!(light.get_state(), "red")
     }
 
-    // implement method and assocaited functions for type enum
+    // implement method and associated functions for type enum
     #[allow(dead_code)]
     #[test]
     fn enum_method_and_associated_functions() {
@@ -111,6 +111,14 @@ mod tests {
         }
 
         impl TrafficLight {
+            pub fn new(color: &str) -> TrafficLight {
+                match color {
+                    "red" => TrafficLight::Red,
+                    "green" => TrafficLight::Green,
+                    "yellow" => TrafficLight::Yellow,
+                    _ => panic!("unknown color `{}`", color),
+                }
+            }
             pub fn color(&self) -> &str {
                 match self {
                     TrafficLight::Green => "green",
@@ -122,9 +130,13 @@ mod tests {
 
         let c = TrafficLight::Yellow;
         assert_eq!(c.color(), "yellow");
+
+        let y = TrafficLight::new(c.color());
+        assert!(matches!(y, TrafficLight::Yellow));
     }
 
     // generic function
+    // use turbofish `::<T>` to explicitly specify type parameter for a generic type or function.
     #[test]
     fn generic_function() {
         struct A; // type A is a unit type
@@ -196,7 +208,7 @@ mod tests {
 
     // generic struct with method return value reference
     #[test]
-    fn impl_struc_with_generic_type_parameter() {
+    fn impl_struct_with_generic_type_parameter() {
         struct Val<T> {
             val: T,
         }
@@ -263,6 +275,7 @@ mod tests {
     }
 
     // array element type and length is part of array type
+    // use const as generic parameter
     #[test]
     fn array_element_type_and_length_is_part_of_array_type() {
         #[allow(dead_code)]
@@ -305,7 +318,7 @@ mod tests {
             }
         }
 
-        fn bark_t<T: Animal>(animal: &T) {
+        fn bark_static<T: Animal>(animal: &T) {
             println!("barking: {}", animal.sound());
         }
 
@@ -325,31 +338,33 @@ mod tests {
          * In contrast to static dispatch, `dyn Trait` is for dynamic dispatch:
          *   for function:
          *     fn bark(animal: &dyn Animal)
-         *   at runtime, call of this function with &Sheep and &Cow, besides of reference of value, it will carry
+         *   at runtime, call of this function with &Sheep and &Cow, in addition to the reference of value, it will carry
          *   a dynamic pointer to the concrete type, so that it can decide to call method of which type.
          *     for: let s = Sheep;
          *     calling: bark(&s)
          *     will carry a reference to `s` and a pointer to type Sheep, so it knows to use type Sheep's impl for trait Animal.
          *
          * In short: `impl Trait` is a trait bound for generic, `dyn Trait` is a trait object for allowing dynamic dispatch.
+         *
+         * Box<dyn Trait> is another dynamic dispatch trait object, like `&dyn Trait`
          */
-        fn bark(animal: &impl Animal) {
+        fn bark_static_sugar(animal: &impl Animal) {
             println!("barking: {}", animal.sound());
         }
-        bark_t(&Sheep);
-        bark(&Cow);
+        bark_static(&Sheep);
+        bark_static_sugar(&Cow);
 
         fn bark_both<T: Animal>(a: &T, b: &T) {
             println!("barking both: {}, {}", a.sound(), b.sound());
         }
         bark_both(&Cow, &Cow);
 
-        fn bark_all(a: &impl Animal, b: &impl Animal) {
+        fn bark_both_sugar(a: &impl Animal, b: &impl Animal) {
             println!("barking both: {}, {}", a.sound(), b.sound());
         }
-        bark_all(&Cow, &Sheep);
+        bark_both_sugar(&Cow, &Sheep);
 
-        fn bark_four(four_animals: &[&dyn Animal; 4]) {
+        fn bark_dynamic(four_animals: &[&dyn Animal; 4]) {
             let [a, b, c, d] = four_animals;
             println!(
                 "barking four: {}, {}, {}, {}",
@@ -359,6 +374,6 @@ mod tests {
                 d.sound()
             );
         }
-        bark_four(&[&Cow, &Sheep, &Cow, &Sheep])
+        bark_dynamic(&[&Cow, &Sheep, &Cow, &Sheep])
     }
 }

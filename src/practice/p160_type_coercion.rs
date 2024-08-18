@@ -36,7 +36,7 @@ mod tests {
         let v = 1000 as u8;
         assert_eq!(v, 1000);
         assert_eq!(v, 232);
-        println!("v = {}", v);
+        assert_eq!(format!("{}", v), "232");
     }
 
     /*
@@ -75,7 +75,7 @@ mod tests {
     }
 
     #[test]
-    fn unsafe_pointer_caculation() {
+    fn unsafe_pointer_calculation() {
         let mut values: [i32; 2] = [1, 2];
 
         let p1: *mut i32 = values.as_mut_ptr();
@@ -107,6 +107,7 @@ mod tests {
         let arr_ptr_casted: *const [u8] = arr_ptr as *const [u8];
         assert_eq!(std::any::type_name_of_val(&arr_ptr_casted), "*const [u8]");
         unsafe {
+            // slice and array pointer: holds element type and length
             assert_eq!(
                 std::mem::size_of_val(&*arr_ptr_casted),
                 std::mem::size_of::<u8>() * 13

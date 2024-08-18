@@ -13,14 +13,14 @@ mod tests {
      *   - By value: T
      */
 
+    // `|x|` is pronounced `pipe x pipe`
     #[test]
     fn capture_with_least_restrictive_manner() {
         let x = 1;
         let closure = |v| v + x;
         assert_eq!(closure(2), 3);
-        // by the least restrictive manner, a mutable reference of x is captured
+        // by the least restrictive manner, a immutable reference of x is captured
         // rather than taking ownership of x
-
         let closure_annotated = |v: i32| -> i32 { v + x };
         assert_eq!(closure_annotated(2), 3);
     }
@@ -51,7 +51,9 @@ mod tests {
         let mut count: i32 = 0;
 
         // `move` move the value count to the closure
-        // in this case, a copy of count
+        // in this case, a copy of count, for type i32 implements trait Copy
+        // count is moved into inc, but it only requires a &mut count
+        // so the closure `inc` impl FnMut
         let mut inc = move || {
             count += 1;
             println!("`count`: {}", count);
@@ -74,8 +76,9 @@ mod tests {
 
         let mut number = Number(0);
 
+        // capture value moved here due to the keyword `move`
         let mut inc = move || {
-            let n = &mut number; // capture value moved here due to use in closure
+            let n = &mut number;
             n.0 += 1;
             println!("`count`: {}", n.0);
         };

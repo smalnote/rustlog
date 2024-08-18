@@ -4,12 +4,12 @@ mod tests {
 
     /*
      * Derivable Traits
-     * Trait taht can be automatically implemented for a struct or an enum by the Rust compiler
+     * Trait that can be automatically implemented for a struct or an enum by the Rust compiler
      * Called "derivable" because they can be derived automatically
      * Most common derivable traits:
      *   - Debug: Allowing to output content via "{:?}"
      *   - Clone: Enables type to be duplicated with "clone()" method
-     *   - Copy: Enables type to be copied implicity, without requiring explicit "clone()" method
+     *   - Copy: Enables type to be copied implicitly, without requiring explicit "clone()" method
      *   - PartialEq: Enables comparison
      */
     #[test]
@@ -57,26 +57,29 @@ mod tests {
     }
 
     // trait as return type
+    // impl Animal is called opaque type, and is only allow in arguments and return types of functions and methods
     #[test]
     fn trait_as_return_type() {
-        trait Animal {}
+        trait Animal {
+            fn new() -> impl Animal;
+        }
 
         struct Cat;
         struct Dog;
 
-        impl Animal for Cat {}
-        impl Animal for Dog {}
-
-        fn return_dog() -> impl Animal {
-            Dog
+        impl Animal for Cat {
+            fn new() -> impl Animal {
+                Cat
+            }
+        }
+        impl Animal for Dog {
+            fn new() -> impl Animal {
+                Dog
+            }
         }
 
-        fn return_cat() -> impl Animal {
-            Cat
-        }
-
-        let _dog = return_dog();
-        let _cat = return_cat();
+        let _dog = Cat::new();
+        let _cat = Dog::new();
     }
 
     // trait with default method
@@ -130,19 +133,18 @@ mod tests {
     }
 
     // operator trait
+    // associated type in trait
     #[test]
-    fn traits_for_operator_overiding() {
+    fn traits_for_operator_overriding() {
         #[derive(Debug, PartialEq)]
         struct Centimeters(f64);
         #[derive(Debug, PartialEq)]
         struct SquareCentimeters(f64);
 
         impl std::ops::Mul for Centimeters {
-            type Output = SquareCentimeters;
+            type Output = SquareCentimeters; // associated type
             fn mul(self, rhs: Self) -> SquareCentimeters {
-                let Centimeters(lhs) = self;
-                let Centimeters(rhs) = rhs;
-                SquareCentimeters(lhs * rhs)
+                SquareCentimeters(self.0 * rhs.0)
             }
         }
 
@@ -276,7 +278,7 @@ mod tests {
      * | ----------|-----------------------------------|------------------------------------------|
      * |           | & (reference)                     | Box                                      |
      * | ----------|-----------------------------------|------------------------------------------|
-     * | Memory    | Only points to a value alread in  | Allocates data on heap and owns it, also |
+     * | Memory    | Only points to a value already in | Allocates data on heap and owns it, also |
      * |           | memory.                           | responsible for deallocating when values |
      * |           |                                   | goes out of scope.                       |
      * | ----------|-----------------------------------|------------------------------------------|
@@ -373,15 +375,16 @@ mod tests {
             println!("{}", d.draw())
         }
 
+        fn draw_with_static_generic<T: Draw>(d: T) {
+            println!("{}", d.draw())
+        }
+
         let x = 42_i8;
         draw_with_ref(&x);
 
         let y = 3.2_f32;
         draw_with_box(Box::new(y));
 
-        fn draw_with_static_generic<T: Draw>(d: T) {
-            println!("{}", d.draw())
-        }
         draw_with_static_generic(y);
     }
 
