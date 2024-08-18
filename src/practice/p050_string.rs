@@ -4,8 +4,10 @@ mod tests {
     #[test]
     fn ref_string_is_ref_str() {
         let s: String = String::from("hello world");
-        let hello: &str = &s[0..5]; // immutable &str
-        let world: &str = &s[6..11]; // immutable &str
+        // immutable &str, called str slice
+        // here String is used as an array, `&array[<range>]` is a immutable view to array, called slice
+        let hello: &str = &s[0..5];
+        let world: &str = &s[6..11];
         assert_eq!(hello, "hello");
         assert_eq!(world, "world");
     }
@@ -23,7 +25,7 @@ mod tests {
     fn you_can_only_concat_string_with_ref_str() {
         let s1: String = String::from("hello ");
         let s2: String = String::from("world!");
-        let s3: String = s1 + &s2; // s1 ownership moved to s3, &String -> &str
+        let s3: String = s1 + &s2; // s1 ownership moved to s3, &String -> &str, impl Add<&str, Output = String> for String
         let s4: String = "hello ".to_string() + s2.as_str(); // cannot use s1 here
         assert_eq!(s3, s4);
     }
@@ -38,12 +40,13 @@ mod tests {
     // string unicode points
     #[test]
     fn string_unicode_points() {
-        let unicode_codepoint = "\u{211D}";
+        let unicode_code_point = "\u{211D}";
         let character_name = "\"Double-stroke capital R\"";
         println!(
             "Unicode point: {}, Character name: {}",
-            unicode_codepoint, character_name
+            unicode_code_point, character_name
         );
+        assert_eq!(unicode_code_point.as_bytes().len(), 3);
     }
 
     // multiple lines string
@@ -51,7 +54,7 @@ mod tests {
     fn multiple_lines_string() {
         let long_string = "String literals
                 can span multiple lines.
-                The linebreak and indentation here \
+                The line break and indentation here \
                 can be escaped too!";
         println!("{}", long_string);
     }
@@ -88,20 +91,20 @@ mod tests {
         assert_eq!(rocket, "🚀");
     }
 
-    // String is a Vec<u8> that guarantee to be valid utf-8 sqeuences
+    // String is a Vec<u8> that guarantee to be valid utf-8 sequences
     #[test]
     fn string_is_backed_by_vec_u8() {
         let mut s = String::new();
         s.push_str("hello");
-        let v: Vec<u8> = vec![104, 101, 108, 108, 111];
+        let v: Vec<u8> = vec![104, 101, 108, b'l', b'o']; // note that b'l' is u8 value of char 'l'
         let v = String::from_utf8(v).expect("invalid utf-8 sequences");
         assert_eq!(s, v);
     }
 
     // String is made up of three components: pointer to heap memory, length in bytes of content, capacity in bytes of memory
-    // A String's capacity grows automatically to acommodate its length.
+    // A String's capacity grows automatically to accommodate its length.
     #[test]
-    fn string_type_compoents() {
+    fn string_type_components() {
         let mut s = String::with_capacity(5);
 
         println!("s = {}, capacity = {}", &s, s.capacity());
@@ -116,15 +119,15 @@ mod tests {
     fn manage_string_memory_manually() {
         let story = "The 🚀 goes to the 🌑!".to_string();
 
-        let mut s = std::mem::ManuallyDrop::new(story);
+        let mut manual_story = std::mem::ManuallyDrop::new(story);
 
-        let ptr = s.as_mut_ptr();
-        let len = s.len();
-        let cap = s.capacity();
+        let ptr = manual_story.as_mut_ptr();
+        let len = manual_story.len();
+        let cap = manual_story.capacity();
 
-        let raw_story = unsafe { String::from_raw_parts(ptr, len, cap) };
+        let story2 = unsafe { String::from_raw_parts(ptr, len, cap) };
 
-        assert_eq!(*s, raw_story);
+        assert_eq!(*manual_story, story2);
     }
 
     // String index in bytes, a chinese character is 3 bytes
@@ -143,8 +146,8 @@ mod tests {
 
     // &String can be convert to &str implicitly
     #[test]
-    fn ref_string_can_be_convert_to_ref_str_implicity() {
-        fn take_firt_word(s: &str) -> &str {
+    fn ref_string_can_be_convert_to_ref_str_implicitly() {
+        fn take_first_word(s: &str) -> &str {
             let bytes = s.as_bytes();
             for (i, &item) in bytes.iter().enumerate() {
                 if item == b' ' {
@@ -154,7 +157,7 @@ mod tests {
             s
         }
         let s: String = String::from("hello world!");
-        let first_word: &str = take_firt_word(&s);
+        let first_word: &str = take_first_word(&s);
         assert_eq!(first_word, "hello");
     }
 }

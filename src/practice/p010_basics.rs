@@ -21,7 +21,9 @@ mod tests {
         let (x, y);
         (x, ..) = (1, 2, 3, 4);
         [.., y] = [1, 2, 3, 4];
-        assert!((x, y) == (1, 4));
+        let [first, .., last] = [1, 2, 3, 4];
+        assert_eq!((x, y), (1, 4));
+        assert_eq!((x, y), (first, last));
     }
 
     // tuple index
@@ -75,6 +77,13 @@ mod tests {
         println!("bytes of usize: {}", std::mem::size_of_val(&n));
     }
 
+    // char is backed by u8
+    #[test]
+    fn char_u8() {
+        let a: u8 = b'a';
+        assert_eq!(a, 97);
+    }
+
     // float types
     #[test]
     fn float_types() {
@@ -87,9 +96,9 @@ mod tests {
     #[test]
     fn literal_type() {
         let x = 42_f64;
-        println!("type of 42_f64: {}", std::any::type_name_of_val(&x));
+        assert_eq!(std::any::type_name_of_val(&x), "f64");
         let y = 42_u128;
-        println!("type of 42_u128: {}", std::any::type_name_of_val(&y));
+        assert_eq!(std::any::type_name_of_val(&y), "u128");
     }
 
     // type suffix in Option
@@ -111,7 +120,7 @@ mod tests {
         assert_eq!(std::u8::MAX, 255);
     }
 
-    // decimal hex otcal binary
+    // decimal hex octal binary
     #[test]
     fn integer_form_decimal_hex_otcal_binary() {
         let v = 1_000_000 + 0xff + 0o77 + 0b1111_1111;
@@ -174,7 +183,7 @@ mod tests {
         assert_eq!(std::mem::size_of::<char>(), 4);
     }
 
-    // char in String is dynamically-sized of UTF-8(1-4 bytes)
+    // char in String is dynamically-sized of UTF-8(1~4 bytes)
     #[test]
     fn char_bytes_of_string() {
         let hello: &str = "hello, 世界!";
@@ -197,11 +206,14 @@ mod tests {
     // unit type
     #[test]
     fn unit_type_for_empty() {
-        fn implicit_return_unit() {
+        fn implicitly_return_unit() {
             println!("I return a unit type implicitly.")
         }
         let x: () = ();
-        assert_eq!(x, implicit_return_unit());
+        assert_eq!(x, implicitly_return_unit());
+
+        fn explicitly_return_unit() -> () {}
+        assert_eq!(x, explicitly_return_unit());
     }
 
     // block statement
@@ -240,14 +252,14 @@ mod tests {
             todo!()
         }
 
-        fn _never_return_wo_mark() {
+        fn _never_return_without_mark() {
             panic!()
         }
     }
 
     // match
     #[test]
-    fn match_boolean() {
+    fn match_boolean_and_return_value() {
         let v = true;
         let _x = match v {
             true => 1,

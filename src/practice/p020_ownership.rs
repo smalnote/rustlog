@@ -4,7 +4,7 @@ mod tests {
     #[test]
     fn ownership_moved_by_assignment() {
         let s1: String = String::from("hello");
-        let s2: String = s1; // memory area of s1 move ownership from s1 to s2
+        let s2: String = s1; // memory area of s1 move ownership from s1 to s2, s1 is not unavailable
         println!("s2 = {s2}");
     }
 
@@ -31,9 +31,9 @@ mod tests {
     fn box_reference() {
         let mut x: Box<i32> = Box::new(42);
         *x /= 6;
-        println!("x = {}", x);
-        println!("*x = {}", *x);
-        println!("&x = {}", &x);
+
+        assert_eq!(x, Box::new(7));
+        assert_eq!(*x, 7);
     }
 
     // partial move by assignment, partial borrow by reference
@@ -51,10 +51,11 @@ mod tests {
 
         println!("person = {:?}", person);
 
+        // destructuring `person`
         let Person { name, ref age } = person;
         println!("name = {name}, age = {age}");
 
-        // error: value borrowed here after move
+        // error: value borrowed here after partial move of name,
         // println!("person = {:?}", person);
 
         // ok: name is moved, age is borrowed
