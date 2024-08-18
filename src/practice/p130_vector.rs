@@ -14,7 +14,7 @@ mod tests {
         let v: Vec<u8> = vec![1, 2, 3];
         is_vec_u8(&v);
 
-        let v: Vec<u8> = vec![1, 2, 3];
+        let v: Vec<u8> = [1, 2, 3].into();
         is_vec_u8(&v);
 
         let mut v1: Vec<u8> = Vec::new();
@@ -58,6 +58,7 @@ mod tests {
     }
 
     // String -> Vec
+    // String is a Vec<u8> and guaranteed to be contained valid utf8 bytes
     #[test]
     fn convert_string_to_vector() {
         let s = "hello".to_string();
@@ -79,7 +80,7 @@ mod tests {
         assert_eq!(v4, vec![0; 10]);
     }
 
-    // implement vector trait `From` for custome type
+    // implement vector trait `From` for custom type
     #[test]
     fn implement_trait_from_of_custom_type_for_vector() {
         struct Point<T> {
@@ -96,7 +97,8 @@ mod tests {
 
         let p = Point { x: 1, y: 2, z: 3 };
         let v = Vec::from(&p);
-        assert_eq!(v, vec![1, 2, 3]);
+        let vv: Vec<i32> = (&p).into();
+        assert_eq!(v, vv);
     }
 
     // vector indexing
@@ -118,7 +120,7 @@ mod tests {
         assert_eq!(v, vec![2, 3, 4, 5, 6]);
     }
 
-    // vector slice(&[]) is readonly, like &str fro String
+    // vector slice(&[]) is readonly, like &str for String
     #[test]
     fn vector_slice() {
         let mut v = vec![1, 2, 3];
@@ -184,7 +186,7 @@ mod tests {
         }
 
         // Vec<Box<dyn T>> or Vec<&dyn T>
-        let formatables: Vec<Box<dyn std::fmt::Display>> = vec![
+        let displays: Vec<Box<dyn std::fmt::Display>> = vec![
             Box::new(1),
             Box::new(2_u8),
             Box::new(3.0_f32),
@@ -195,8 +197,27 @@ mod tests {
             Box::new(IpAddr::V4("127.0.0.1".to_string())),
             Box::new(IpAddr::V6("::1".to_string())),
         ];
-        for v in formatables {
+        for v in displays {
             println!("{}", v);
+        }
+
+        #[derive(Debug)]
+        #[allow(dead_code)]
+        enum Variant {
+            I32(i32),
+            U32(u32),
+            String(String),
+            Point(f32, f32),
+        }
+
+        let variants = vec![
+            Variant::U32(42),
+            Variant::String("magic".to_owned()),
+            Variant::Point(3.3, 4.4),
+        ];
+
+        for v in variants.iter() {
+            println!("enum of variant in vector = {:?}", v);
         }
     }
 }

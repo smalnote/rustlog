@@ -37,14 +37,14 @@ mod tests {
 
     #[test]
     fn make_static_lifetime_by_box_leak() {
-        static mut _CONFIG_NONE: Option<&mut Config> = Option::None;
-
         #[derive(Debug)]
         #[allow(dead_code)]
         struct Config {
             a: String,
             b: String,
         }
+
+        static mut _CONFIG_NONE: Option<&mut Config> = Option::None;
 
         fn init() -> Option<&'static mut Config> {
             let box_config = Box::new(Config {

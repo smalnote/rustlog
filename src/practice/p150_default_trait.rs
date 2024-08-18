@@ -1,7 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use std::hash::BuildHasherDefault;
-    use twox_hash::XxHash64;
 
     // Default trait
     #[test]
@@ -33,7 +31,7 @@ mod tests {
         let default_point_1: Point<i32> = Default::default();
         // Point::default() inference generic type i32 from `Point<i32>`
         let default_point_2: Point<i32> = Point::default();
-        // specifiy type Point<i32>'s default function
+        // specify type Point<i32>'s default function
         type PointI32 = Point<i32>;
         let default_point_3 = PointI32::default();
         let default_point_4 = Point::<i32>::default();
@@ -51,20 +49,23 @@ mod tests {
     #[allow(dead_code)]
     #[test]
     fn implement_default_trait_of_generic_type() {
+        use std::hash::BuildHasherDefault;
+        use twox_hash::XxHash64;
         struct Pump<H> {
             h: H,
         }
 
+        /// Implements Default trait for Pump<H> where H bound to Default trait.
         impl<H: Default> Default for Pump<H> {
             fn default() -> Self {
                 Pump { h: H::default() }
             }
         }
 
-        let _p: Pump<BuildHasherDefault<XxHash64>> = Default::default();
-        let _p: Pump<BuildHasherDefault<XxHash64>> = Pump::default();
-        let _p = Pump::<BuildHasherDefault<XxHash64>>::default();
-        type BuildXxHash64 = BuildHasherDefault<XxHash64>;
+        let _p: Pump<BuildHasherDefault<XxHash64>> = Default::default(); // totally type infer
+        let _p: Pump<BuildHasherDefault<XxHash64>> = Pump::default(); // partially type infer
+        let _p = Pump::<BuildHasherDefault<XxHash64>>::default(); // totally specify type by turbofish
+        type BuildXxHash64 = BuildHasherDefault<XxHash64>; // type alias for shorthand
         let _p = Pump::<BuildXxHash64>::default();
 
         impl<H> From<H> for Pump<H> {
@@ -76,5 +77,6 @@ mod tests {
         let _p: Pump<&str> = From::from("trait");
         let _p = Pump::<&str>::from("type");
         let _p = <Pump<&str> as From<&str>>::from("from");
+        let _p = <Pump<&str>>::from("from");
     }
 }

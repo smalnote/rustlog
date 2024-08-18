@@ -22,7 +22,7 @@ mod tests {
         use std::str::FromStr;
 
         let parsed: i32 = "5".parse().unwrap();
-        let turbo_parsed = "10".parse::<i32>().unwrap(); // ::<i32> is called turbo fix syntax
+        let turbo_parsed = "10".parse::<i32>().unwrap(); // ::<i32> is called turbofish syntax
         let from_str = i32::from_str("20").unwrap();
         assert_eq!(parsed + turbo_parsed + from_str, 35);
     }

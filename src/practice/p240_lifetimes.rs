@@ -2,7 +2,7 @@
 mod tests {
     /*
      * Lifetimes:
-     *   - Another kind of generic ensuring that references are valid as long as needed
+     *   - Another kind of generic ensuring that `references` are valid as long as needed
      *   - Every reference has a lifetime, which is the scope for which that reference is valid
      *   - Most of the time implicit and inferred, don't need to worry
      *   - Sometimes lifetime annotations are needed, if the compiler can't infer it
@@ -136,7 +136,7 @@ mod tests {
 
         {
             let yy = "longer_longer";
-            let zz = longer(x, yy);
+            let zz = longer(x, yy); // x has 'a, yy has 'b, 'a :> 'b, so 'a can be coerced to 'b to satisfy function `longer`
             assert_eq!(zz, "longer_longer");
         }
 
@@ -162,7 +162,7 @@ mod tests {
         assert_eq!(output_value(), "hello");
 
         fn output_static_lifetime_reference<'a>() -> &'static str {
-            "hello"
+            "hello" // &str literal has static lifetime, it's hardcoded into executable binary
         }
         assert_eq!(output_static_lifetime_reference(), "hello");
     }

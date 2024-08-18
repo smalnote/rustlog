@@ -1,7 +1,7 @@
 #[allow(dead_code)]
 fn divide(x: f32, y: f32) -> Result<f32, &'static str> {
     if y == 0.0 {
-        return Err("Division by zero");
+        return Err("divided by zero");
     }
     Ok(x / y)
 }
@@ -19,9 +19,8 @@ mod tests {
      *   using a match pattern.
      */
 
-    use std::num::{IntErrorKind, ParseIntError};
-
     use super::*;
+    use std::num::{IntErrorKind, ParseIntError};
 
     #[test]
     fn safe_divide() {
@@ -92,6 +91,7 @@ mod tests {
             Ok((n1 * n2).to_string())
         }
 
+        // `?.` unwrap value of Ok and call method on it
         assert_eq!(multiply_str("10", "20")?.parse::<i32>()?, 200);
         Ok(())
     }
@@ -124,12 +124,14 @@ mod tests {
 
     #[test]
     fn map_result_value() {
+        // Result<T, Error>.map(FnOnce(T) -> U) -> Result<U, Error>
         fn double(n: &str) -> Result<i32, ParseIntError> {
             n.parse::<i32>().map(|n| n * 2)
         }
 
         assert_eq!(double("42"), Ok(84));
 
+        // Result<T, Error>.and_then(FnOnce(T) -> Result<U, Error>) -> Result<U, Error>
         fn double_then(n: &str) -> Result<i32, ParseIntError> {
             n.parse::<i32>().and_then(|n| Ok(n * 2))
         }

@@ -1,13 +1,10 @@
 #[cfg(test)]
 mod tests {
 
-    use std::collections::HashMap;
-    use std::hash::{BuildHasherDefault, DefaultHasher, Hash, Hasher};
-    use twox_hash::XxHash64;
-
     // HashMap<&str, i32>
     #[test]
     fn use_hash_map() {
+        use std::collections::HashMap;
         let mut scores: HashMap<&str, i32> = HashMap::new();
         scores.insert("Sunface", 98);
         scores.insert("Daniel", 95);
@@ -33,6 +30,7 @@ mod tests {
     // array of tuples to HashMap
     #[test]
     fn convert_array_of_tuples_to_hash_map() {
+        use std::collections::HashMap;
         let teams: [(&str, i32); 3] = [
             ("Chinese Team", 100),
             ("American Team", 10),
@@ -48,6 +46,8 @@ mod tests {
     // HashMap entry
     #[test]
     fn use_hash_map_entry() {
+        use std::collections::HashMap;
+
         let mut player_stats = HashMap::new();
 
         player_stats.entry("health").or_insert(100);
@@ -69,7 +69,7 @@ mod tests {
 
     /*
      * Requirements of HashMap key
-     * Any type taht implements the Eq and Hash traits can be a key in HashMap. This include:
+     * Any type that implements the Eq and Hash traits can be a key in HashMap. This include:
      *   - bool
      *   - int, uint, and all variations thereof
      *   - String and &str (tips: you can have a HashMap keyed by String and call .get() with an &str)
@@ -83,6 +83,8 @@ mod tests {
      */
     #[test]
     fn implement_custom_hash_map_key_type() {
+        use std::collections::HashMap;
+        use std::hash::{DefaultHasher, Hash, Hasher};
         #[derive(Debug, Hash, PartialEq, Eq)]
         struct Viking {
             name: String,
@@ -123,6 +125,8 @@ mod tests {
     // HashMap capacity
     #[test]
     fn test_hash_map_capacity() {
+        use std::collections::HashMap;
+
         let mut m = HashMap::<i32, i32>::with_capacity(5);
 
         let mut cap = m.capacity();
@@ -153,6 +157,8 @@ mod tests {
     #[allow(unused_mut)]
     #[test]
     fn test_hash_map_elements_ownership() {
+        use std::collections::HashMap;
+
         // Values of type i32 are copied into HashMap
         let mut numbers = HashMap::<i32, i32>::new();
         let mut n = 42;
@@ -189,6 +195,10 @@ mod tests {
     // Third-party Hash libs
     #[test]
     fn use_third_party_hash_algorithm() {
+        use std::collections::HashMap;
+        use std::hash::BuildHasherDefault;
+        use twox_hash::XxHash64;
+
         let mut map: HashMap<&str, &str, BuildHasherDefault<XxHash64>> = Default::default();
         map.insert("version", "alpha");
         assert_eq!(map.get("version"), Some(&"alpha"));

@@ -8,13 +8,13 @@ mod tests {
      *       - Box::into_raw
      *       - Use marcos std::ptr::addr_of!() and std::ptr::addr_of_mut!()
      *   - Raw pointer does not take ownership of the original allocation, but using
-     *     raw pointer after value's lifetime will panic, the old variable is still
+     *     raw pointer after value's lifetime result in undefined behavior, the old variable is still
      *     used for memory management.
      *   - Using of raw pointer must be in unsafe block.
-     *   - Check null: use method `is_method` of `*const T` and `*mut T`.
+     *   - Check null: use method `is_null` of `*const T` and `*mut T`.
      *   - Storing through a raw pointer using *ptr = data calls drop on the old value
      *     `*ptr` if it implements Drop, so it must be initialized ahead.
-     *   - Dereference a null raw pointer will panic.
+     *   - Dereference a null raw pointer result in segment fault.
      *   - Using `ptr` after going out scope of pointed value is undefined behavior.
      */
 
@@ -37,7 +37,7 @@ mod tests {
     }
 
     #[test]
-    fn dereference_dangling_pointer_will_panic() {
+    fn dereference_dangling_pointer_is_undefined_behavior() {
         let mut magic = 42;
         let mut ptr: *mut i32 = &mut magic;
 
@@ -83,7 +83,7 @@ mod tests {
      * Note: ptr = &mut d1, if d2 is immutable, *ptr = d2 make it possible to mutate d2.
      */
     #[test]
-    fn custom_drop_trait_on_deref_ptr_assignment() {
+    fn custom_drop_trait_on_dereference_ptr_assignment() {
         use std::alloc::{alloc, dealloc, Layout};
 
         #[derive(Debug, PartialEq)]
@@ -166,7 +166,6 @@ mod tests {
     /*
      * std::ptr::NonNull<T>
      *   NonNull is like raw pointer `*mut T`, but is guaranteed to be non-zero and covariant.
-     *
      *
      * Variance:
      *   Variance describes how the type system behaves when dealing with lifetime or generics,
