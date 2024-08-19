@@ -1,6 +1,173 @@
 #[cfg(test)]
 mod tests {
     /*
+     * Sized: In order to store value on stack, the Rust compiler needs to know the
+     *   size of that memory at compilation time.
+     */
+
+    /* Smart Pointers:
+     * - Box<T>: the enclosed data needs to be stored on heap, others like a &mut
+     *     - Store dynamic value, like Trait, can have different size at runtime, by `Box<dyn Trait>`
+     *     - Use in recursive data type, struct List<T> { value: T, next: Option <Box<T>> }
+     */
+    #[test]
+    fn smart_pointer_box() {
+        trait Vehicle {
+            fn drive(&self);
+        }
+
+        struct Truck {}
+
+        impl Vehicle for Truck {
+            fn drive(&self) {
+                println!("Truck is driving");
+            }
+        }
+
+        let v: Box<dyn Vehicle>;
+        v = Box::new(Truck {});
+        v.drive();
+
+        struct TruckNode {
+            current: Truck,
+            next: Option<Box<TruckNode>>,
+        }
+
+        impl TruckNode {
+            fn new(t: Truck) -> Self {
+                Self {
+                    current: t,
+                    next: None,
+                }
+            }
+
+            fn append(&mut self, t: Truck) {
+                let mut p = self;
+                loop {
+                    match p.next {
+                        None => break,
+                        Some(ref mut b) => p = &mut **b,
+                    }
+                }
+                p.next = Some(Box::new(Self {
+                    current: t,
+                    next: None,
+                }))
+            }
+
+            fn drive(&self) {
+                let mut p = self;
+                loop {
+                    p.current.drive();
+                    match p.next {
+                        None => break,
+                        Some(ref b) => p = &**b,
+                    }
+                }
+            }
+        }
+        let mut tt = TruckNode::new(Truck {});
+        tt.append(Truck {});
+        tt.append(Truck {});
+        tt.append(Truck {});
+        tt.drive();
+    }
+
+    /*
+     * Smart pointers:
+     * - Rc<T>: reference counting memory, memory got recycled after last reference goes out of scope
+     *     -
+     */
+    #[test]
+    fn reference_count() {
+        use std::rc::Rc;
+
+        #[derive(Debug)]
+        #[allow(dead_code)]
+        struct Truck {
+            name: String,
+        }
+
+        impl Truck {
+            fn new(name: &str) -> Self {
+                Self {
+                    name: name.to_owned(),
+                }
+            }
+        }
+
+        let truck_alpha: Rc<Truck> = Rc::new(Truck::new("alpha"));
+        let truck_bravo: Rc<Truck> = Rc::new(Truck::new("bravo"));
+        let truck_gamma: Rc<Truck> = Rc::new(Truck::new("gamma"));
+
+        let team_one = vec![truck_alpha, Rc::clone(&truck_bravo)];
+        let team_two = vec![Rc::clone(&truck_bravo), truck_gamma];
+
+        assert_eq!(
+            addr_of!(*team_two[0].as_ref()),
+            addr_of!(*team_one[1].as_ref())
+        );
+
+        assert_eq!(Rc::strong_count(&truck_bravo), 3); // the original one plus two clones
+        println!("team_one = {:?}", team_one);
+        println!("team_two = {:?}", team_two);
+        println!(
+            "strong count reference of truck bravo = {}",
+            Rc::strong_count(&truck_bravo)
+        );
+        println!(
+            "team_one bravo addr = {:p}, team_two bravo addr = {:p}",
+            addr_of!(*team_two[0].as_ref()),
+            addr_of!(*team_one[1].as_ref())
+        );
+    }
+
+    /* Smart pointers:
+     * Arc: atomic reference counter
+     *   - For sending value to spawn thread by implementing trait `Send`
+     *   - Use atomic type to order value visiting thread safe, without `Lock`
+     */
+    #[test]
+    fn arc() {
+        use std::sync::Arc;
+
+        #[derive(Debug)]
+        #[allow(dead_code)]
+        struct Truck {
+            name: String,
+        }
+
+        impl Truck {
+            fn new(name: &str) -> Self {
+                Self {
+                    name: name.to_owned(),
+                }
+            }
+        }
+
+        let truck_alpha: Arc<Truck> = Arc::new(Truck::new("alpha"));
+        let truck_bravo: Arc<Truck> = Arc::new(Truck::new("bravo"));
+        let truck_gamma: Arc<Truck> = Arc::new(Truck::new("gamma"));
+
+        let truck_bravo_one = Arc::clone(&truck_bravo);
+        let truck_bravo_two = Arc::clone(&truck_bravo);
+
+        let thread_one = std::thread::spawn(move || {
+            let team_one = vec![truck_alpha, truck_bravo_one];
+            team_one
+        });
+        let team_one = thread_one.join().unwrap();
+
+        let thread_two = std::thread::spawn(move || {
+            let team_two = vec![truck_bravo_two, truck_gamma];
+            team_two
+        });
+        let team_two = thread_two.join().unwrap();
+
+        println!("team_one = {:?}, team_two = {:?}", team_one, team_two);
+    }
+
+    /*
      * Raw pointer `*const T`, `*mut T`:
      *   - Raw pointer is a nullable version of reference.
      *   - Creating raw pointer:
@@ -18,7 +185,7 @@ mod tests {
      *   - Using `ptr` after going out scope of pointed value is undefined behavior.
      */
 
-    use std::ptr::NonNull;
+    use std::ptr::{addr_of, NonNull};
 
     #[test]
     fn coerce_reference_to_raw_pointers() {
