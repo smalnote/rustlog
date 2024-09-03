@@ -27,3 +27,4 @@ pub mod p250_static_lifetime;
 pub mod p260_closures;
 pub mod p270_iterator;
 pub mod p280_pointers;
+pub mod p290_linkedlist;
