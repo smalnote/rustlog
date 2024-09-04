@@ -92,6 +92,8 @@ impl<T> IntoIterator for List<T> {
 
 pub struct Iter<'a, T> {
     current: Option<NonNull<Node<T>>>,
+    // tells compiler this Iter owns &Node<T> with lifetime 'a
+    // since the field `current` doesn't use &Node<T> directly
     _marker: PhantomData<&'a Node<T>>,
 }
 
@@ -100,7 +102,7 @@ impl<'a, T> Iterator for Iter<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.current.map(|node| unsafe {
-            let node = &*node.as_ptr();
+            let node = &*node.as_ptr(); // here use &Node<T> with lifetime 'a
             self.current = node.next;
             &node.element
         })
