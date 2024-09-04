@@ -90,7 +90,57 @@ impl<T> IntoIterator for List<T> {
     }
 }
 
+pub struct Iter<'a, T> {
+    current: Option<NonNull<Node<T>>>,
+    _marker: PhantomData<&'a Node<T>>,
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.current.map(|node| unsafe {
+            let node = &*node.as_ptr();
+            self.current = node.next;
+            &node.element
+        })
+    }
+}
+
+pub struct IterMut<'a, T> {
+    current: Option<NonNull<Node<T>>>,
+    _marker: PhantomData<&'a Node<T>>,
+}
+
+impl<'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.current.map(|node| unsafe {
+            let node = &mut *node.as_ptr();
+            self.current = node.next;
+            &mut node.element
+        })
+    }
+}
+
+impl<'a, T> List<T> {
+    fn iter(&self) -> Iter<'a, T> {
+        Iter {
+            current: self.head,
+            _marker: PhantomData,
+        }
+    }
+
+    fn iter_mut(&mut self) -> IterMut<'a, T> {
+        IterMut {
+            current: self.head,
+            _marker: PhantomData,
+        }
+    }
+}
 mod tests {
+
     use super::*;
 
     #[test]
@@ -100,8 +150,27 @@ mod tests {
             list.push_back(i);
         }
 
+        let mut i = 1;
         for elem in list {
-            println!("{}", elem);
+            assert_eq!(i, elem);
+            i += 1;
+        }
+        assert_eq!(i, 11);
+    }
+
+    #[test]
+    fn use_iter() {
+        let mut list = List::<f32>::new();
+        for value in 100..150 {
+            list.push_back(value as f32);
+        }
+
+        for value in list.iter_mut() {
+            *value += 1.0;
+        }
+
+        for (i, value) in list.iter().enumerate() {
+            assert_eq!(*value, (101 + i) as f32);
         }
     }
 
