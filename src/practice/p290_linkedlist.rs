@@ -21,6 +21,7 @@ impl<T> Node<T> {
     }
 }
 
+#[allow(dead_code, unused_imports)]
 impl<T> List<T> {
     fn new() -> Self {
         List {
@@ -90,14 +91,17 @@ impl<T> IntoIterator for List<T> {
     }
 }
 
+#[allow(dead_code)]
 pub struct Iter<'a, T> {
     current: Option<NonNull<Node<T>>>,
     // tells compiler this Iter owns &Node<T> with lifetime 'a
     // since the field `current` doesn't use &Node<T> directly
+    // PhantomData to hold the lifetime `'a`, since there is no other place to hold it
     _marker: PhantomData<&'a Node<T>>,
 }
 
 impl<'a, T> Iterator for Iter<'a, T> {
+    // this declaration requires lifetime `'a`
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -109,12 +113,15 @@ impl<'a, T> Iterator for Iter<'a, T> {
     }
 }
 
+#[allow(dead_code)]
 pub struct IterMut<'a, T> {
     current: Option<NonNull<Node<T>>>,
+    // PhantomData to hold the lifetime `'a`
     _marker: PhantomData<&'a Node<T>>,
 }
 
 impl<'a, T> Iterator for IterMut<'a, T> {
+    // this declaration requires lifetime `'a`
     type Item = &'a mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -126,6 +133,7 @@ impl<'a, T> Iterator for IterMut<'a, T> {
     }
 }
 
+#[allow(dead_code)]
 impl<'a, T> List<T> {
     fn iter(&self) -> Iter<'a, T> {
         Iter {
@@ -141,6 +149,7 @@ impl<'a, T> List<T> {
         }
     }
 }
+#[allow(unused_imports)]
 mod tests {
 
     use super::*;
