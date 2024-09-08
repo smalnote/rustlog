@@ -1,8 +1,8 @@
 mod tests {
-    use std::marker::PhantomData;
 
     #[test]
     fn test_phantom_data_as_type_placeholder() {
+        use std::marker::PhantomData;
         trait Sound {
             fn sound() -> String;
         }
@@ -50,6 +50,7 @@ mod tests {
     #[test]
     #[allow(dead_code)]
     fn test_phantom_data_as_borrow_marker() {
+        use std::marker::PhantomData;
         struct Tag<'a, T: 'a> {
             pointer: *const T,
             _marker: PhantomData<&'a T>,
