@@ -9,3 +9,6 @@ run_guess:
 
 run_rustlog:
 	cargo run --bin rustlog
+
+run_minigrep:
+	IGNORE_CASE=true cargo run --bin minigrep -- error ./src/bin/minigrep/main.rs
