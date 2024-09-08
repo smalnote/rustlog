@@ -149,7 +149,7 @@ impl<'a, T> List<T> {
         }
     }
 }
-#[allow(unused_imports)]
+#[cfg(test)]
 mod tests {
 
     use super::*;
