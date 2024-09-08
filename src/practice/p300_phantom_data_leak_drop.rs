@@ -1,27 +1,113 @@
-#[derive(Debug)]
-struct Tag {
-    name: String,
-}
+mod tests {
+    use std::marker::PhantomData;
 
-impl From<&str> for Tag {
-    fn from(value: &str) -> Self {
-        Self {
-            name: value.to_string(),
+    #[test]
+    fn test_phantom_data_as_type_placeholder() {
+        trait Sound {
+            fn sound() -> String;
+        }
+
+        struct Sheep();
+
+        impl Sound for Sheep {
+            fn sound() -> String {
+                "Maah".to_string()
+            }
+        }
+
+        struct Cow();
+
+        impl Sound for Cow {
+            fn sound() -> String {
+                "Mooh".to_string()
+            }
+        }
+
+        struct Greeting<T: Sound> {
+            // use type T avoid compiler complaining unused type, `*const T` indicates this struct doesn't own type T
+            _marker: PhantomData<*const T>,
+        }
+
+        impl<T: Sound> Greeting<T> {
+            fn new() -> Self {
+                Greeting {
+                    _marker: PhantomData,
+                }
+            }
+
+            fn greet(&self) -> String {
+                T::sound()
+            }
+        }
+
+        let g1 = Greeting::<Sheep>::new();
+        assert_eq!(g1.greet(), "Maah");
+
+        let g2 = Greeting::<Cow>::new();
+        assert_eq!(g2.greet(), "Mooh");
+    }
+
+    #[test]
+    #[allow(dead_code)]
+    fn test_phantom_data_as_borrow_marker() {
+        struct Tag<'a, T: 'a> {
+            pointer: *const T,
+            _marker: PhantomData<&'a T>,
+        }
+
+        impl<'a, T: 'a> From<&'a T> for Tag<'a, T> {
+            fn from(value: &'a T) -> Self {
+                Self {
+                    pointer: value,
+                    _marker: PhantomData,
+                }
+            }
+        }
+
+        impl<'a, T: 'a> Tag<'a, T> {
+            fn set(&mut self, value: &'a T) {
+                self.pointer = value
+            }
+        }
+
+        let mut tag = Tag::from(&42);
+
+        {
+            // PhantomData<&'a T> enforce compiler check lifetime of `&n`
+            // acting like Tag owns `&'a T`, but actually use raw pointer
+            // let n = 84;
+            // tag.set_ptr(&n); // error: borrowed value does not live long enough
+        }
+
+        let n = 84;
+        tag.set(&n);
+
+        unsafe {
+            assert_eq!(*tag.pointer, 84);
         }
     }
-}
 
-impl Drop for Tag {
-    fn drop(&mut self) {
-        println!("tag {} dropped", self.name);
+    #[derive(Debug)]
+    struct Tag {
+        name: String,
     }
-}
 
-mod tests {
+    impl From<&str> for Tag {
+        fn from(value: &str) -> Self {
+            Self {
+                name: value.to_string(),
+            }
+        }
+    }
+
+    impl Drop for Tag {
+        fn drop(&mut self) {
+            println!("tag {} dropped", self.name);
+        }
+    }
 
     #[test]
     fn test_tag_drop() {
-        use super::Tag;
         println!("before tag block");
         {
             let _tag = Tag::from("block_tag");
@@ -31,7 +117,6 @@ mod tests {
 
     #[test]
     fn test_tag_with_box_leak() {
-        use super::Tag;
         println!("before tag block");
         {
             let tag = Tag::from("leaked_tag");
@@ -42,7 +127,6 @@ mod tests {
 
     #[test]
     fn test_tag_with_box_from_raw() {
-        use super::Tag;
         println!("before tag block");
         {
             let tag = Tag::from("wrapped_leaked_tag");
@@ -57,7 +141,6 @@ mod tests {
     #[test]
     #[allow(dead_code)]
     fn test_tag_with_phantom_data() {
-        use super::Tag;
         use std::{marker::PhantomData, ptr::NonNull};
         struct TagPointer {
             value: Option<NonNull<Tag>>,
@@ -114,7 +197,6 @@ mod tests {
 
     #[test]
     fn test_tag_with_phantom_data_of_reference() {
-        use super::Tag;
         use std::{marker::PhantomData, ptr::NonNull};
         trait Mutator {
             type Output;
