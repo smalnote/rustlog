@@ -1,9 +1,15 @@
-use std::{env, error::Error, fs, process};
+use std::{
+    env,
+    error::Error,
+    fs::File,
+    io::{self, BufRead, BufReader},
+    process,
+};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     let config = Config::new(&args).unwrap_or_else(|err| {
-        eprint!("Failed to parse arguments: {}", err);
+        eprintln!("Failed to parse arguments: {}", err);
         process::exit(1);
     });
 
@@ -35,44 +41,47 @@ impl Config {
 }
 
 fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let contents = fs::read_to_string(&config.file_path)?;
+    let file = File::open(&config.file_path)?;
+    let reader = BufReader::new(file);
 
     let found_lines = if config.ignore_case {
-        search_case_insensitive(&config.query, &contents)
+        search_case_insensitive(&config.query, reader)
     } else {
-        search(&config.query, &contents)
+        search(&config.query, reader)
     };
 
-    for line in found_lines {
+    for line in found_lines? {
         println!("{}", line)
     }
 
     Ok(())
 }
 
-fn search<'a>(query: &'a str, contents: &'a str) -> Vec<&'a str> {
+fn search<'a>(query: &'a str, reader: impl BufRead) -> io::Result<Vec<String>> {
     let mut found = Vec::new();
 
-    for line in contents.lines() {
+    for line in reader.lines() {
+        let line = line?;
         if line.contains(query) {
             found.push(line);
         }
     }
 
-    found
+    Ok(found)
 }
 
-fn search_case_insensitive<'a>(query: &'a str, contents: &'a str) -> Vec<&'a str> {
+fn search_case_insensitive<'a>(query: &'a str, reader: impl BufRead) -> io::Result<Vec<String>> {
     let query = query.to_lowercase();
     let mut found = Vec::new();
 
-    for line in contents.lines() {
+    for line in reader.lines() {
+        let line = line?;
         if line.to_lowercase().contains(&query) {
             found.push(line);
         }
     }
 
-    found
+    Ok(found)
 }
 
 #[cfg(test)]
@@ -86,8 +95,10 @@ mod tests {
 Rust:
 safe, fast, productive.
 Pick three.";
-
-        assert_eq!(vec!["safe, fast, productive."], search(query, contents));
+        assert_eq!(
+            vec!["safe, fast, productive."],
+            search(query, contents.as_bytes()).unwrap()
+        );
     }
 
     #[test]
@@ -101,7 +112,7 @@ Trust me.";
 
         assert_eq!(
             vec!["Rust:", "Trust me."],
-            search_case_insensitive(query, contents)
+            search_case_insensitive(query, contents.as_bytes()).unwrap()
         );
     }
 }
