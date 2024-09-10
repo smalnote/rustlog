@@ -1,6 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use std::ops::{Deref, DerefMut};
+    use std::{
+        cell::RefCell,
+        ops::{Deref, DerefMut},
+        rc::{Rc, Weak},
+    };
 
     #[test]
     fn test_deref_box() {
@@ -51,5 +55,77 @@ mod tests {
         // double deref from &mut MyBox<MyBox<i32>> to &mut i32
         multiply_seven(&mut y);
         assert_eq!(**y, 294);
+    }
+
+    #[test]
+    #[allow(dead_code)]
+    fn test_ref_cell_rc_circle() {
+        #[derive(Debug)]
+        enum List {
+            Cons(i32, RefCell<Rc<List>>),
+            Nil,
+        }
+
+        impl List {
+            fn tail(&self) -> Option<&RefCell<Rc<List>>> {
+                match self {
+                    List::Cons(_, item) => Some(item),
+                    List::Nil => None,
+                }
+            }
+        }
+
+        let a = Rc::new(List::Cons(5, RefCell::new(Rc::new(List::Nil))));
+
+        println!("a initial rc count = {}", Rc::strong_count(&a));
+        println!("a next item = {:?}", a.tail());
+
+        let b = Rc::new(List::Cons(10, RefCell::new(Rc::clone(&a))));
+
+        println!("a rc count after b creation = {}", Rc::strong_count(&a));
+        println!("b initial rc count = {}", Rc::strong_count(&b));
+        println!("b next item = {:?}", b.tail());
+
+        if let Some(link) = a.tail() {
+            *link.borrow_mut() = Rc::clone(&b);
+        }
+
+        println!("b rc count after changing a = {}", Rc::strong_count(&b));
+        println!("a rc count after changing a = {}", Rc::strong_count(&a));
+
+        // Uncomment the next line to see that we have a cycle;
+        // it will overflow the stack
+        // NOTE: print a or a.tail will cause Rust print an infinite list
+        // println!("a next item = {:?}", a.tail());
+    }
+
+    #[test]
+    #[allow(dead_code)]
+    fn test_rc_weak_for_tree_parent() {
+        #[derive(Debug)]
+        struct Node<T> {
+            element: T,
+            parent: RefCell<Weak<Node<T>>>,
+            children: RefCell<Vec<Rc<Node<T>>>>,
+        }
+
+        impl<T> Node<T> {
+            fn new(element: T) -> Self {
+                Self {
+                    element,
+                    parent: Default::default(),
+                    children: Default::default(),
+                }
+            }
+        }
+
+        let leaf = Rc::new(Node::<i32>::new(0));
+
+        let branch = Rc::new(Node::<i32>::new(10));
+
+        branch.children.borrow_mut().push(Rc::clone(&leaf));
+        *leaf.parent.borrow_mut() = Rc::downgrade(&branch);
+
+        println!("{:?}", &branch);
     }
 }
