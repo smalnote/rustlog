@@ -111,6 +111,23 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_while_let_pattern_match() {
+        let mut stack = Vec::new();
+
+        stack.push(1);
+        stack.push(2);
+        stack.push(3);
+
+        let mut current = 3;
+        while let Some(value) = stack.pop() {
+            assert_eq!(value, current);
+            current -= 1;
+        }
+
+        assert_eq!(current, 0);
+    }
+
     // const
     #[test]
     fn predefined_integer_constants() {
