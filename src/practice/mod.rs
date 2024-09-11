@@ -33,3 +33,4 @@ pub mod p310_cell;
 pub mod p320_documentation;
 pub mod p330_box;
 pub mod p340_fearless_concurrency;
+pub mod p350_unsafe;
