@@ -211,4 +211,51 @@ mod tests {
             (first @ (..2 | 3..), ..) => println!("first = {first}"),
         }
     }
+
+    #[test]
+    fn match_refutable_pattern_with_while_let() {
+        let mut stack: Vec<i32> = [5; 10].into();
+
+        let mut count = 0;
+        while let Some(element) = stack.pop() {
+            count += 1;
+            assert_eq!(element, 5);
+        }
+        assert_eq!(count, 10);
+    }
+
+    #[test]
+    fn match_pattern_in_destructuring_struct() {
+        struct Point {
+            x: i32,
+            y: i32,
+        }
+
+        let point = Point { x: 42, y: 6 };
+        let Point { x: a, y: b } = point;
+        assert_eq!(a, 42);
+        assert_eq!(b, 6);
+
+        let point = Point { x: a, y: b };
+        let Point { x, y } = point;
+        assert_eq!(x, 42);
+        assert_eq!(y, 6);
+    }
+
+    #[test]
+    fn match_multiple_value_with_at_binding() {
+        enum Message {
+            Hello { id: i32 },
+        }
+
+        let msg = Message::Hello { id: 5 };
+
+        match msg {
+            Message::Hello {
+                id: ranged_id @ 3..=7,
+            } => println!("Found an id in range: {}", ranged_id),
+            Message::Hello { id: 0..=12 } => println!("Found anther id"),
+            Message::Hello { id: _ } => println!("Nevertheless"),
+        }
+    }
 }
