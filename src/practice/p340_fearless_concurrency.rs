@@ -8,7 +8,7 @@
 #[cfg(test)]
 mod tests {
     use std::{
-        sync::{mpsc, Arc, Mutex},
+        sync::{mpsc, Arc, Mutex, RwLock},
         thread,
         time::Duration,
     };
@@ -152,6 +152,42 @@ mod tests {
         t3.join().unwrap();
 
         assert_eq!(*sum0.lock().unwrap(), (1 + 100) * 100 / 2);
+    }
+
+    #[test]
+    fn test_use_atomic_rc_share_rw_lock() {
+        let lock = Arc::new(RwLock::new(0));
+
+        let mut adders = vec![];
+
+        for _ in 0..3 {
+            let lock = Arc::clone(&lock);
+            let adder = thread::spawn(move || {
+                for _ in 0..42 {
+                    '_read: {
+                        let value = lock.read().unwrap();
+                        if *value >= 42 {
+                            return;
+                        }
+                    }
+                    '_add: {
+                        let mut value = lock.write().unwrap();
+                        if *value >= 42 {
+                            return;
+                        }
+                        *value += 1;
+                    }
+                }
+            });
+            adders.push(adder);
+        }
+
+        for adder in adders {
+            adder.join().unwrap();
+        }
+
+        let value = lock.read().unwrap();
+        assert_eq!(*value, 42);
     }
 
     /// Implementing Send and Sync manually is unsafe
