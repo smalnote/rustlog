@@ -35,6 +35,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "hello_marco"
+version = "0.1.0"
+
+[[package]]
+name = "hello_marco_derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -122,6 +134,8 @@ dependencies = [
 name = "rust_by_practice"
 version = "0.1.0"
 dependencies = [
+ "hello_marco",
+ "hello_marco_derive",
  "rand",
  "time",
  "twox-hash",

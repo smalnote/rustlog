@@ -28,9 +28,11 @@ mod tests {
     /// Custom derive marco should be in a proc-marco lib crate, skip.
     #[test]
     fn test_custom_derive_attribute_marcos() {
-        #[derive(Debug)]
+        use hello_marco::HelloMarco;
+        use hello_marco_derive::HelloMarco;
+        #[derive(HelloMarco)]
         struct Pancakes;
 
-        println!("{:?}", Pancakes);
+        Pancakes::hello_marco();
     }
 }
