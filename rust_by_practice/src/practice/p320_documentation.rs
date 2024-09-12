@@ -4,7 +4,7 @@
 ///
 /// ```
 /// let x = 41;
-/// let y = rustlog::practice::p320_documentation::add_one(x);
+/// let y = rust_by_practice::practice::p320_documentation::add_one(x);
 ///
 /// assert_eq!(y, 42);
 /// ```

@@ -1,0 +1,39 @@
+[package]
+name = "rust_by_practice"
+version = "0.1.0"
+edition = "2021"
+description = "Rust language experimental playground."
+license = "MIT OR Apache-2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.release]
+# Abort the program immediately if panic, without unwinding call stack, cleaning up.
+# Make the resulting binary as small as possible.
+panic = "abort"
+
+[[bin]]
+name = "hello"
+path = "src/bin/hello/main.rs"
+
+[[bin]]
+name = "guess"
+path = "src/bin/guess/main.rs"
+
+[[bin]]
+name = "guess_with_return"
+path = "src/bin/guess_with_return/main.rs"
+
+[[bin]]
+name = "minigrep"
+path = "src/bin/minigrep/main.rs"
+
+[[bin]]
+name = "restaurant"
+path = "src/bin/retaurant.rs"
+
+[dependencies]
+time = { version = "^0.3", features = ["local-offset"] }
+rand = "^0.8"
+utf8_slice = "1.0.0"
+twox-hash = "^1.6"
