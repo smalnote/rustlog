@@ -39,3 +39,4 @@ utf8_slice = "1.0.0"
 twox-hash = "^1.6"
 hello_marco = { path = "../hello_marco" }
 hello_marco_derive = { path = "../hello_marco_derive" }
+length = { path = "../length" }
