@@ -4,7 +4,7 @@ use std::io::{self, Write};
 
 fn main() {
     let secret_number = rand::thread_rng().gen_range(1..=100);
-    print!("Guess the number!\n");
+    println!("Guess the number!");
     loop {
         print!("Please input your guess:");
         io::stdout().flush().expect("Failed to flush stdout");
@@ -12,15 +12,13 @@ fn main() {
         io::stdin()
             .read_line(&mut guess)
             .expect("Failed to read line");
-        let guess: u32 = match guess
-            .trim()
-            .parse() {
-                Ok(num) => num,
-                Err(_) => {
-                    println!("Please input a number!");
-                    continue;
-                }
-            };
+        let guess: u32 = match guess.trim().parse() {
+            Ok(num) => num,
+            Err(_) => {
+                println!("Please input a number!");
+                continue;
+            }
+        };
         println!("You guessed: {}", guess);
         match guess.cmp(&secret_number) {
             Ordering::Less => println!("Too small! Try again."),

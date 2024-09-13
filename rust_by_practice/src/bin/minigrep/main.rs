@@ -58,7 +58,7 @@ fn run(config: Config) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn search<'a>(query: &'a str, reader: impl BufRead) -> io::Result<Vec<String>> {
+fn search(query: &str, reader: impl BufRead) -> io::Result<Vec<String>> {
     let mut found = Vec::new();
 
     for line in reader.lines() {
@@ -71,7 +71,7 @@ fn search<'a>(query: &'a str, reader: impl BufRead) -> io::Result<Vec<String>> {
     Ok(found)
 }
 
-fn search_case_insensitive<'a>(query: &'a str, reader: impl BufRead) -> io::Result<Vec<String>> {
+fn search_case_insensitive(query: &str, reader: impl BufRead) -> io::Result<Vec<String>> {
     let query = query.to_lowercase();
     let mut found = Vec::new();
 

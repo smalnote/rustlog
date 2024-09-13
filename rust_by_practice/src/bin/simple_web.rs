@@ -70,11 +70,11 @@ fn send_programmatic_tcp_connection(addr: &str) {
     // Connect to the server
     if let Ok(mut stream) = TcpStream::connect(addr) {
         println!("Sending message to server...");
-        stream.write(b"OPTIONS / HTTP/1.1\r\n").unwrap();
+        stream.write_all(b"OPTIONS / HTTP/1.1\r\n").unwrap();
         stream.flush().unwrap();
 
         let mut buffer = [0; 512];
-        stream.read(&mut buffer).unwrap();
+        let _ = stream.read(&mut buffer).unwrap();
         println!(
             "Response from server: {}",
             String::from_utf8_lossy(&buffer[..])

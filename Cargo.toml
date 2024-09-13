@@ -1,3 +1,9 @@
 [workspace]
 resolver = "2"
-members = ["rust_by_practice", "hello_marco", "hello_marco_derive", "length", "cargo_feature"]
+members = [
+    "rust_by_practice",
+    "hello_marco",
+    "hello_marco_derive",
+    "length",
+    "cargo_feature",
+]
