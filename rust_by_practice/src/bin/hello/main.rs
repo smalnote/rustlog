@@ -3,7 +3,7 @@ use time::OffsetDateTime;
 
 fn main() {
     fn add(a: i32, b: i32) -> i32 {
-        return a + b;
+        a + b
     }
     let greeting: &str = "Hello, world!";
     let mut rng = rand::thread_rng();

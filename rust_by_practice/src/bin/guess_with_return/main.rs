@@ -5,7 +5,7 @@ use std::io::{self, Write};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let secret_number = rand::thread_rng().gen_range(1..=100);
-    print!("Guess the number!\n");
+    println!("Guess the number!");
     loop {
         print!("Please input your guess:");
         io::stdout().flush()?;

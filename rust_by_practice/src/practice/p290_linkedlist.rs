@@ -58,7 +58,7 @@ impl<T> List<T> {
             let node = Box::from_raw(node.as_ptr());
             self.head = node.next;
 
-            if matches!(self.head, None) {
+            if self.head.is_none() {
                 self.tail = None
             }
             self.len -= 1;
@@ -67,7 +67,7 @@ impl<T> List<T> {
     }
 
     fn pop_front(&mut self) -> Option<T> {
-        self.pop_front_node().map(|node| (*node).element)
+        self.pop_front_node().map(|node| node.element)
     }
 }
 
