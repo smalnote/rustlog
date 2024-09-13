@@ -28,8 +28,8 @@ mod tests {
     /// Custom derive marco should be in a proc-marco lib crate, skip.
     #[test]
     fn test_custom_derive_attribute_marcos() {
+        // import both trait and derive procedural marcos named `HelloMarco`
         use hello_marco::HelloMarco;
-        use hello_marco_derive::HelloMarco;
         #[derive(HelloMarco)]
         struct Pancakes;
 

@@ -4,3 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+hello_marco_derive = { path = "../hello_marco_derive", optional = true }
+
+[features]
+derive = ["dep:hello_marco_derive"]

@@ -67,6 +67,9 @@ dependencies = [
 [[package]]
 name = "hello_marco"
 version = "0.1.0"
+dependencies = [
+ "hello_marco_derive",
+]
 
 [[package]]
 name = "hello_marco_derive"
@@ -198,7 +201,6 @@ version = "0.1.0"
 dependencies = [
  "ctrlc",
  "hello_marco",
- "hello_marco_derive",
  "length",
  "rand",
  "time",
