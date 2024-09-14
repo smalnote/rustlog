@@ -40,3 +40,4 @@ twox-hash = "^1.6"
 hello_marco = { path = "../hello_marco", features = ["derive"] }
 length = { path = "../length" }
 ctrlc = "^3.0"
+futures = "^0.3"
