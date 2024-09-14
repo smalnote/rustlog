@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use std::marker::PhantomData;
 
     #[test]
     fn test_phantom_data_as_type_placeholder() {
@@ -252,5 +253,62 @@ mod tests {
             }
         }
         println!("after tag block");
+    }
+
+    #[test]
+    fn test_phantom_data_ownership() {
+        #[derive(Debug)]
+        pub struct RawPointer<T> {
+            ptr: *mut T,
+            _marker: PhantomData<T>,
+        }
+
+        impl<T> RawPointer<T> {
+            fn from(t: T) -> Self {
+                Self {
+                    ptr: std::ptr::from_mut(Box::leak(Box::new(t))),
+                    _marker: PhantomData,
+                }
+            }
+
+            fn take(&mut self) -> Option<T> {
+                let ptr = self.ptr;
+                if !ptr.is_null() {
+                    self.ptr = std::ptr::null_mut();
+                    unsafe {
+                        return Some(*Box::from_raw(ptr));
+                    }
+                }
+                None
+            }
+        }
+
+        impl<T> Drop for RawPointer<T> {
+            fn drop(&mut self) {
+                if !self.ptr.is_null() {
+                    unsafe {
+                        // take ownership of T, and drop it
+                        let _ = Box::from_raw(self.ptr);
+                    }
+                    self.ptr = std::ptr::null_mut();
+                }
+            }
+        }
+
+        #[derive(Debug)]
+        struct Droppable(u32);
+
+        impl Drop for Droppable {
+            fn drop(&mut self) {
+                println!("dropping Droppable({})", self.0);
+            }
+        }
+
+        let mut raw_ptr = RawPointer::from(Droppable(0));
+        {
+            let _ = raw_ptr.take();
+        }
+        println!("{:?}", raw_ptr);
+        let _ = RawPointer::from(Droppable(42));
     }
 }
