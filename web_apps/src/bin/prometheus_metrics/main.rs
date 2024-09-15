@@ -19,14 +19,13 @@ use tracing::debug;
 #[tokio::main]
 async fn main() {
     observ::setup_tracing();
-    let (_main_server, _metrics_server) =
-        tokio::join!(start_main_server(), observ::start_metrics_server());
+    let (_main_server, _metrics_server) = tokio::join!(start_main_server(), start_metrics_server());
 }
 
 async fn start_main_server() {
     let app = main_app();
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
         .expect("listen on tcp address failed");
     debug!("listening on {}", listener.local_addr().unwrap());
@@ -37,4 +36,17 @@ fn main_app() -> Router {
     Router::new()
         .route("/devices", get(routes::devices))
         .route_layer(middleware::from_fn(observ::track_metrics))
+}
+
+pub async fn start_metrics_server() {
+    let app = observ::metrics_app();
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3001")
+        .await
+        .expect("listen on metrics port failed");
+    tracing::debug!(
+        "metrics server listening on {}",
+        listener.local_addr().unwrap()
+    );
+    axum::serve(listener, app).await.unwrap();
 }
