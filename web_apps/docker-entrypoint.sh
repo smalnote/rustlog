@@ -2,8 +2,5 @@
 
 set -e
 
-if [ "$#" -eq 0 ]; then
-    exec /app/server
-else
-    exec "$@"
-fi
+echo "Entrypoint final ccommand(all args): $@"
+exec "$@"
