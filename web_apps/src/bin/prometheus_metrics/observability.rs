@@ -8,20 +8,7 @@ use axum::{
 use metrics_exporter_prometheus::{Matcher, PrometheusBuilder, PrometheusHandle};
 use std::{future::ready, time::Instant};
 
-pub async fn start_metrics_server() {
-    let app = metrics_app();
-
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3001")
-        .await
-        .expect("listen on metrics port failed");
-    tracing::debug!(
-        "metrics server listening on {}",
-        listener.local_addr().unwrap()
-    );
-    axum::serve(listener, app).await.unwrap();
-}
-
-fn metrics_app() -> Router {
+pub fn metrics_app() -> Router {
     let recorder_handle = setup_metrics_recorder();
     Router::new().route("/metrics", get(move || ready(recorder_handle.render())))
 }
