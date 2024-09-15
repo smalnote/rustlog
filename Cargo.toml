@@ -5,5 +5,5 @@ members = [
     "hello_marco",
     "hello_marco_derive",
     "length",
-    "cargo_feature",
+    "cargo_feature", "web_apps",
 ]
