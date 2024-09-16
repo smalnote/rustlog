@@ -161,20 +161,11 @@ mod tests {
                 }
             }
         }
-
-        impl Into<Option<Box<Tag>>> for TagPointer {
-            fn into(mut self) -> Option<Box<Tag>> {
-                match self.value {
-                    None => None,
-                    Some(tag) => unsafe {
-                        // takes ownership of Box<Tag>, which PhantomData<Box<Tag>> declares ownership
-                        let tag = Box::from_raw(tag.as_ptr());
-                        // prevent Drop from running again on this pointer by setting it to None
-                        self.value = None;
-                        // move Box<Tag> as return value
-                        Some(tag)
-                    },
-                }
+        impl From<TagPointer> for Option<Box<Tag>> {
+            fn from(mut tag: TagPointer) -> Self {
+                tag.value
+                    .take()
+                    .map(|tag| unsafe { Box::from_raw(tag.as_ptr()) })
             }
         }
 

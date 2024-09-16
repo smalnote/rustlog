@@ -46,14 +46,13 @@ mod tests {
 
     // nested loop break
     #[test]
+    #[allow(clippy::never_loop)]
     fn loop_with_label_for_break() {
-        let mut x = 0;
+        let x;
         'outer: loop {
             loop {
-                x += 1;
-                if x == 42 {
-                    break 'outer;
-                }
+                x = 42;
+                break 'outer;
             }
         }
         assert_eq!(x, 42);

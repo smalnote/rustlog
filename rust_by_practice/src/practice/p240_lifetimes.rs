@@ -53,6 +53,7 @@ mod tests {
      */
     #[test]
     fn function_input_reference_with_lifetime() {
+        #[allow(clippy::needless_lifetimes)]
         fn is_one<'a>(value: &'a i32) {
             assert_eq!(value, &1_i32);
         }
@@ -84,6 +85,7 @@ mod tests {
      */
     #[test]
     fn lifetime_annotation_for_mutable_reference() {
+        #[allow(clippy::needless_lifetimes)]
         fn double<'a>(value: &'a mut i32) {
             *value *= 2
         }
@@ -102,6 +104,7 @@ mod tests {
      */
     #[test]
     fn multiple_lifetimes() {
+        #[allow(clippy::needless_lifetimes)]
         fn multiply_lhs_by_rsh<'a, 'b, T>(lhs: &'a mut T, rhs: &'b mut T) -> &'a mut T
         where
             T: std::ops::Mul<Output = T> + Copy + Sized,
@@ -116,7 +119,7 @@ mod tests {
         assert_eq!(*result, 42_i32);
 
         // result is a reference of lhs, changing it affect the lhs
-        *result = *result * 2;
+        *result *= 2;
         assert_eq!(lhs, 84_i32);
     }
 
@@ -147,6 +150,7 @@ mod tests {
     // static lifetime means value live throughout the entire program
     #[test]
     fn passing_local_value() {
+        #[allow(clippy::needless_lifetimes)]
         fn output_input_reference<'a>(s: &'a mut String) -> &'a String {
             *s = String::from("hello");
             s
@@ -156,11 +160,13 @@ mod tests {
         output_input_reference(&mut s);
         assert_eq!(s, "hello");
 
+        #[allow(clippy::extra_unused_lifetimes)]
         fn output_value<'a>() -> String {
             String::from("hello")
         }
         assert_eq!(output_value(), "hello");
 
+        #[allow(clippy::extra_unused_lifetimes)]
         fn output_static_lifetime_reference<'a>() -> &'static str {
             "hello" // &str literal has static lifetime, it's hardcoded into executable binary
         }
@@ -189,7 +195,7 @@ mod tests {
         let single = Borrowed(&x);
         println!("x is borrowed in {:?}", single);
 
-        let u = 3.14;
+        let u = std::f64::consts::PI;
         let v = 4.13;
         let double = NamedBorrowed { x: &u, y: &v };
         println!("u and v is borrowed in {:?}", double);
@@ -281,6 +287,7 @@ mod tests {
         }
 
         impl ImportantExcerpt<'_> {
+            #[allow(clippy::needless_lifetimes)]
             fn level<'a>(&'a self) -> i32 {
                 3
             }
@@ -320,14 +327,17 @@ mod tests {
      */
     #[test]
     fn lifetime_without_elision() {
+        #[allow(clippy::needless_lifetimes)]
         fn input<'a>(x: &'a i32) {
             println!("`annotated_input`: {}", x)
         }
 
+        #[allow(clippy::needless_lifetimes)]
         fn pass<'a>(x: &'a i32) -> &'a i32 {
             x
         }
 
+        #[allow(clippy::needless_lifetimes)]
         fn longest<'a, 'b>(x: &'a str, _y: &'b str) -> &'a str {
             x
         }
@@ -335,9 +345,12 @@ mod tests {
         struct Owner(i32);
 
         impl Owner {
+            #[allow(clippy::needless_lifetimes)]
             fn add_one<'a>(&'a mut self) {
                 self.0 += 1;
             }
+
+            #[allow(clippy::needless_lifetimes)]
 
             fn print<'a>(&'a self) {
                 println!("`print:`: {}", self.0);
@@ -376,6 +389,7 @@ mod tests {
      */
     #[test]
     fn lifetime_with_elision() {
+        #[allow(clippy::needless_lifetimes)]
         fn _input<'a>(x: &'a i32) {
             println!("`annotated_input`: {}", x)
         }
@@ -385,6 +399,7 @@ mod tests {
             println!("`annotated_input`: {}", x)
         }
 
+        #[allow(clippy::needless_lifetimes)]
         fn _pass<'a>(x: &'a i32) -> &'a i32 {
             x
         }
@@ -396,6 +411,7 @@ mod tests {
             x
         }
 
+        #[allow(clippy::needless_lifetimes)]
         fn _longest<'a, 'b>(x: &'a str, _y: &'b str) -> &'a str {
             x
         }
@@ -460,10 +476,12 @@ mod tests {
             s
         }
 
+        #[allow(clippy::needless_lifetimes)]
         fn __first_world<'a>(s: &'a str) -> &str {
             s
         }
 
+        #[allow(clippy::needless_lifetimes)]
         fn _first_world<'a>(s: &'a str) -> &'a str {
             s
         }

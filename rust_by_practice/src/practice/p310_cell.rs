@@ -93,11 +93,11 @@ mod tests {
             Object::new(5, Rc::clone(&group_two)),
         ];
 
-        fn filter_group_ids(objects: &Vec<Object>, group: Group) -> Vec<u32> {
+        fn filter_group_ids(objects: &[Object], group: Group) -> Vec<u32> {
             objects
                 .iter()
                 .filter_map(move |object| {
-                    if &*object.group.borrow() == &group {
+                    if *object.group.borrow() == group {
                         Some(object.id)
                     } else {
                         None

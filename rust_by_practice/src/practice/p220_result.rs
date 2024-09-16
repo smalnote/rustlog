@@ -123,6 +123,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::bind_instead_of_map)]
     fn map_result_value() {
         // Result<T, Error>.map(FnOnce(T) -> U) -> Result<U, Error>
         fn double(n: &str) -> Result<i32, ParseIntError> {
@@ -132,8 +133,8 @@ mod tests {
         assert_eq!(double("42"), Ok(84));
 
         // Result<T, Error>.and_then(FnOnce(T) -> Result<U, Error>) -> Result<U, Error>
-        fn double_then(n: &str) -> Result<i32, ParseIntError> {
-            n.parse::<i32>().and_then(|n| Ok(n * 2))
+        fn double_then(n: &str) -> Result<u32, ParseIntError> {
+            n.parse::<i32>().and_then(|n| Ok(n as u32 * 2))
         }
         assert_eq!(double_then("42"), Ok(84));
     }

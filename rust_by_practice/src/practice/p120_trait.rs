@@ -21,7 +21,7 @@ mod tests {
         }
 
         let p = Point { x: 3.1, y: 4.1 };
-        let q = p.clone();
+        let q = p; // auto copy
         assert_eq!(p, q);
 
         fn use_clone_eq<T: Clone + PartialEq + std::fmt::Debug>(a: &T, b: &T) {

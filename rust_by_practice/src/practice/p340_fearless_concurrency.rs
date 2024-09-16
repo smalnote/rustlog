@@ -72,7 +72,7 @@ mod tests {
             i += 1;
         }
 
-        assert_eq!(i, 10 as u32);
+        assert_eq!(i, 10);
     }
 
     #[test]

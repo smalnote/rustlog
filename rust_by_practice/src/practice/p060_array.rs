@@ -29,6 +29,7 @@ mod tests {
     // slice is type of &[T]
     // slice is a immutable view of array
     #[test]
+    #[allow(clippy::size_of_ref)]
     fn slice_if_readonly_ref_of_array() {
         let arr: [i32; 5] = [0, 1, 2, 3, 4];
         let slice: &[i32] = &arr; // take the whole array, equivalent to &arr[..];

@@ -16,7 +16,7 @@ mod tests {
     #[test]
     fn str_can_be_use_in_box() {
         let s: Box<str> = "hello world".into();
-        let ss: &str = &(*s);
+        let ss: &str = &s;
         assert_eq!(ss, "hello world");
     }
 

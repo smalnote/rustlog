@@ -41,6 +41,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::needless_lifetimes)]
     fn test_contravariant_fn_t() {
         fn take_fn_static(_: fn(_: &'static str)) {}
 

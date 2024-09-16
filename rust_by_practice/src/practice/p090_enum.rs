@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use core::f32;
+
     // enum with additional tuple
     #[test]
     fn enum_with_additional_tuple() {
@@ -143,10 +145,7 @@ mod tests {
     #[test]
     fn built_in_option_is_implemented_with_enum() {
         fn plus_one(x: Option<i32>) -> Option<i32> {
-            match x {
-                None => None,
-                Some(i) => Some(i + 1),
-            }
+            x.map(|x| x + 1)
         }
         let five: Option<i32> = Some(5);
         let six: Option<i32> = plus_one(five);
@@ -187,14 +186,9 @@ mod tests {
             fn awkward_len(&mut self) -> u32 {
                 let mut node = self;
                 let mut size = 0_u32;
-                loop {
-                    match node {
-                        &mut List::Cons(_, ref mut next) => {
-                            size += 1;
-                            node = &mut **next;
-                        }
-                        &mut List::None => break,
-                    }
+                while let List::Cons(_, ref mut next) = node {
+                    node = &mut **next;
+                    size += 1;
                 }
                 size
             }
@@ -212,10 +206,10 @@ mod tests {
         }
 
         let mut list = List::<f32>::new();
-        list = list.prepend(3.14);
+        list = list.prepend(3.2);
         list = list.prepend(4.48);
         list = list.prepend(1.67);
-        assert_eq!(list.stringify(), "1.67 -> 4.48 -> 3.14 -> None");
+        assert_eq!(list.stringify(), "1.67 -> 4.48 -> 3.2 -> None");
         assert_eq!(list.len(), 3);
         assert_eq!(list.awkward_len(), 3);
         println!("{}", list.stringify());

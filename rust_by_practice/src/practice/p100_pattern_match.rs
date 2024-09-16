@@ -62,6 +62,7 @@ mod tests {
     // `==` requires Type implements trait PartialEq
     // while `matches!` not, and is more powerful
     #[test]
+    #[allow(clippy::manual_is_ascii_check)]
     fn matches_marco_for_range() {
         let alphabets = ['a', 'b', 'c', 'd', 'e', '0', 'A', 'L'];
 

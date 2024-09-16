@@ -22,6 +22,7 @@ mod tests {
     fn two_way_of_reference() {
         let c: char = '中';
         let c1: &char = &c;
+        #[allow(clippy::toplevel_ref_arg)]
         let ref c2 = c;
         assert_eq!(*c1, *c2);
         assert_eq!(c1, c2); // c1, c2 are both references(pointers) to c
@@ -29,6 +30,7 @@ mod tests {
 
     // use ref for pattern matching
     #[test]
+    #[allow(clippy::unnecessary_literal_unwrap)]
     fn use_reference_within_matching_arm_for_borrowing() {
         let maybe_name: Option<String> = Some(String::from("alice"));
         match maybe_name {
@@ -37,7 +39,7 @@ mod tests {
             Some(ref name) => {
                 assert_eq!(name, "alice");
             }
-            _ => {}
+            None => unimplemented!(),
         }
         // maybe_name still available here
         assert_eq!(maybe_name.unwrap(), "alice");

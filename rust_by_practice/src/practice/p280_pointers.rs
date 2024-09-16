@@ -24,6 +24,7 @@ mod tests {
             }
         }
 
+        #[allow(clippy::needless_late_init)]
         let v: Box<dyn Vehicle>;
         v = Box::new(Truck {});
         v.drive();

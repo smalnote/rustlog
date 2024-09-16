@@ -19,8 +19,7 @@ mod tests {
         // println!("s1 = {s1}"); // error: s1 moved to takes_ownership
 
         fn gives_ownership() -> String {
-            let s = String::from("hello");
-            s
+            String::from("hello")
         }
         let s2 = gives_ownership();
         println!("s2 = {s2}");
@@ -92,7 +91,7 @@ mod tests {
         }
         // s2 is the only mutable reference to s at this point
         let s2 = &mut s;
-        s2.push_str("!");
+        s2.push('!');
         assert_eq!(s, "hello world!");
     }
 

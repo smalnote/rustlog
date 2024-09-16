@@ -33,9 +33,7 @@ mod tests {
 
             // parameter `&mut self` borrow mutable instance
             fn rotate(&mut self) {
-                let w: u32 = self.width;
-                self.width = self.height;
-                self.height = w;
+                std::mem::swap(&mut self.width, &mut self.height);
             }
 
             // self must be the first paramter
@@ -45,11 +43,11 @@ mod tests {
             }
 
             // canonical form of self parameter
-            fn normalize(self: &mut Self) {
+            fn normalize(&mut self) {
                 if self.width > self.height {
-                    self.height = self.width
+                    self.height = self.width;
                 } else {
-                    self.width = self.height
+                    self.width = self.height;
                 }
             }
         }
@@ -171,7 +169,7 @@ mod tests {
 
         assert_eq!(2, sum(1_i8, 1_i8));
         assert_eq!(49, sum(42, 7));
-        assert_eq!(3.14, sum(3.0, 0.14));
+        assert_eq!(3.27, sum(3.0, 0.27));
     }
 
     // generic struct

@@ -11,6 +11,7 @@ mod tests {
      *   - eprintln!: eprint! with newline appended
      */
     #[test]
+    #[allow(clippy::print_literal)]
     fn printing_marcos() {
         let text = format!("Hello, {}", 42);
         print!("{}!{}", text, "\n");
@@ -66,8 +67,8 @@ Point(
             }
         }
         assert_eq!(
-            format!("{}", Point(3.14, 4.13)),
-            "Point{ x: 3.14, y: 4.13 }"
+            format!("{}", Point(3.27, 4.13)),
+            "Point{ x: 3.27, y: 4.13 }"
         );
 
         impl fmt::Debug for Point {
@@ -75,7 +76,7 @@ Point(
                 write!(f, "({}, {})", self.0, self.1)
             }
         }
-        assert_eq!(format!("{:?}", Point(3.14, 4.13)), "(3.14, 4.13)");
+        assert_eq!(format!("{:?}", Point(3.27, 4.13)), "(3.27, 4.13)");
     }
 
     // `?` question mark for error handling in Display
