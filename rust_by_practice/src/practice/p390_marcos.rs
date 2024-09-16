@@ -6,10 +6,11 @@ mod tests {
         macro_rules! simple_vec {
             ( $( $x:expr ),* ) => {
                 {
-                    let mut temp_vec = Vec::new();
+                    let temp_vec = vec![
                     $(
-                        temp_vec.push($x);
+                        $x,
                     )*
+                    ];
                     temp_vec
                 }
             };

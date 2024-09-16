@@ -80,6 +80,7 @@ mod tests {
 
     #[test]
     fn coerced_static_lifetime_to_shorter_lifetime() {
+        #[allow(clippy::needless_lifetimes)]
         fn need_shorter<'a>(s: &'a str) {
             assert_eq!(s, "hello");
         }
@@ -88,6 +89,7 @@ mod tests {
         need_shorter(s);
 
         static NUM: i32 = 42;
+        #[allow(clippy::needless_lifetimes)]
         fn coerce_static<'a>(_: &'a i32) -> &'a i32 {
             &NUM
         }
@@ -102,6 +104,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::needless_borrows_for_generic_args)]
     fn static_lifetime_trait_bound() {
         use std::fmt::Debug;
 

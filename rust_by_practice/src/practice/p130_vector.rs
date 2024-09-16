@@ -103,6 +103,7 @@ mod tests {
 
     // vector indexing
     #[test]
+    #[allow(clippy::needless_range_loop)]
     fn vector_indexing() {
         let mut v = vec![1, 2, 3];
 
@@ -210,7 +211,7 @@ mod tests {
             Point(f32, f32),
         }
 
-        let variants = vec![
+        let variants: Vec<Variant> = vec![
             Variant::U32(42),
             Variant::String("magic".to_owned()),
             Variant::Point(3.3, 4.4),

@@ -83,7 +83,7 @@ mod tests {
 
         // iter_mut() uses mutable reference of v
         for x in v.iter_mut() {
-            *x = *x * 2;
+            *x *= 2;
         }
 
         // into_iter() takes the ownership of v
@@ -157,7 +157,7 @@ mod tests {
 
         use std::collections::HashMap;
         let fib20 = Fibonacci::new(20);
-        let fib20: HashMap<u32, u32> = fib20.map(|x| ((x, x))).collect();
+        let fib20: HashMap<u32, u32> = fib20.map(|x| (x, x)).collect();
         for (i, v) in fib20 {
             println!("key = {}, value = {}", i, v);
         }

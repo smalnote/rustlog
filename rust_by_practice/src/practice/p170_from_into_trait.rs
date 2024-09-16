@@ -58,12 +58,10 @@ mod tests {
                     std::io::ErrorKind::WriteZero,
                     "io error",
                 ))
+            } else if parse_err {
+                Ok("NaN".to_string())
             } else {
-                if parse_err {
-                    Ok("NaN".to_string())
-                } else {
-                    Ok("42".to_string())
-                }
+                Ok("42".to_string())
             }
         }
 

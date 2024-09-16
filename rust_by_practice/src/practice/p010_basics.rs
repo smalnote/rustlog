@@ -131,10 +131,10 @@ mod tests {
     // const
     #[test]
     fn predefined_integer_constants() {
-        assert_eq!(std::i8::MAX, 127);
-        assert_eq!(std::i16::MAX, 32767);
-        assert_eq!(std::i32::MAX, 2147483647);
-        assert_eq!(std::u8::MAX, 255);
+        assert_eq!(i8::MAX, 127);
+        assert_eq!(i16::MAX, 32767);
+        assert_eq!(i32::MAX, 2147483647);
+        assert_eq!(u8::MAX, 255);
     }
 
     // decimal hex octal binary
@@ -171,7 +171,8 @@ mod tests {
 
     // boolean logic
     #[test]
-    fn boolean_logicl_caculation() {
+    #[allow(clippy::nonminimal_bool, clippy::bool_assert_comparison)]
+    fn boolean_logical_calculation() {
         assert_eq!(true && false, false);
         assert_eq!(true || false, true);
         assert_eq!(!false, true);
@@ -222,6 +223,7 @@ mod tests {
 
     // unit type
     #[test]
+    #[allow(clippy::unit_cmp, clippy::unused_unit)]
     fn unit_type_for_empty() {
         fn implicitly_return_unit() {
             println!("I return a unit type implicitly.")

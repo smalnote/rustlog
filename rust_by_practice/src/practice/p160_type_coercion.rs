@@ -6,26 +6,26 @@ mod tests {
     fn unsigned_integer_coercion() {
         let one_thousand = 1000_i32;
         let small = one_thousand as u8;
-        assert_eq!(small as i32, one_thousand - (std::u8::MAX as i32 + 1) * 3);
+        assert_eq!(small as i32, one_thousand - (u8::MAX as i32 + 1) * 3);
         // For positive numbers, this the same as the modulus
         assert_eq!(small, (one_thousand % 256) as u8);
 
-        let u32_plus_one = std::u32::MAX as u64 + 1;
+        let u32_plus_one = u32::MAX as u64 + 1;
         assert_eq!(u32_plus_one as u32, 0);
 
         assert_eq!(-1_i8 as u8, 255);
-        assert_eq!((std::u32::MAX as u16 as u8), std::u8::MAX);
+        assert_eq!((u32::MAX as u16 as u8), u8::MAX);
     }
 
     #[test]
     fn keyword_as_can_be_chained() {
         assert_eq!(97_i32 as u8 as char, 'a');
-        assert_eq!((('a' as u8) + 1) as char, 'b');
+        assert_eq!((('a' as u32) + 1) as u8 as char, 'b');
     }
 
     #[test]
     fn cast_float_to_integer_trim_fraction() {
-        assert_eq!(3.1415_f32 as u8, 3);
+        assert_eq!(3.27_f32 as u8, 3);
     }
 
     #[test]
@@ -33,7 +33,7 @@ mod tests {
     fn suppress_overflow_errors() {
         assert_eq!(u8::MAX, 255);
 
-        let v = 1000 as u8;
+        let v = 1000_u32 as u8;
         assert_eq!(v, 1000);
         assert_eq!(v, 232);
         assert_eq!(format!("{}", v), "232");
@@ -47,12 +47,12 @@ mod tests {
      */
     #[test]
     fn saturating_casting() {
-        assert_eq!(-314.523_f64 as i8, std::i8::MIN);
+        assert_eq!(-314.523_f64 as i8, i8::MIN);
 
-        assert_eq!(-314.523_f64 as u8, std::u8::MIN);
+        assert_eq!(-314.523_f64 as u8, u8::MIN);
         assert_eq!(-314.523_f64 as u8, 0);
 
-        assert_eq!(65536.313_f64 as u16, std::u16::MAX);
+        assert_eq!(65536.313_f64 as u16, u16::MAX);
     }
 
     /*
@@ -83,12 +83,12 @@ mod tests {
         let second_address: usize = first_address + std::mem::size_of::<i32>();
         let p2: *mut i32 = second_address as *mut i32;
         unsafe {
-            *p2 = *p2 + 1;
+            *p2 += 1;
             assert_eq!(values[1], 3);
 
             // both reference and pointer us `*` to reach pointed value
             let ref_p2: &mut i32 = &mut *p2;
-            *ref_p2 = *ref_p2 + 1;
+            *ref_p2 += 1;
             assert_eq!(values[1], 4);
         }
     }
@@ -104,6 +104,7 @@ mod tests {
         assert_eq!(std::any::type_name_of_val(&arr_ref), "&[u64; 13]");
         assert_eq!(std::any::type_name_of_val(&arr_ptr), "*const [u64]");
 
+        #[allow(clippy::cast_slice_different_sizes)]
         let arr_ptr_casted: *const [u8] = arr_ptr as *const [u8];
         assert_eq!(std::any::type_name_of_val(&arr_ptr_casted), "*const [u8]");
         unsafe {

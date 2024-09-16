@@ -195,7 +195,7 @@ mod tests {
             println!("{}", is_equal(4));
         }
 
-        let x = vec![1, 2, 3];
+        let x = [1, 2, 3];
         call_fn(|z| z == x.len());
     }
 
