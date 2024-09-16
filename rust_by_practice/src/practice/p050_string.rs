@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use core::str;
+
     // &str string slice
     #[test]
     fn ref_string_is_ref_str() {
@@ -64,6 +66,14 @@ mod tests {
     fn raw_string() {
         let raw_str = r"I'm writing Ru\x73\x74!";
         println!("{}", raw_str);
+
+        let paragraph = r#"Hello, World! \t
+你好，世界 \t
+        "#;
+        println!("{}", paragraph);
+
+        let bytes = b"Hello, world!";
+        println!("{}", str::from_utf8(bytes).unwrap());
     }
 
     // String -> &str by slice index
