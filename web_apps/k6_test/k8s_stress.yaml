@@ -1,0 +1,10 @@
+apiVersion: k6.io/v1alpha1
+kind: TestRun
+metadata:
+  name: stress-test
+spec:
+  parallelism: 8
+  script:
+    configMap:
+      name: stress-test
+      file: stress.js

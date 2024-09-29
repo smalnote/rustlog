@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-metrics-example
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: web-apps
+    app.kubernetes.io/component: prometheus-metrics-example
+spec:
+  jobLabel: prometheus-metrics-example
+  namespaceSelector:
+    matchNames:
+    - default
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: web-apps
+      app.kubernetes.io/component: prometheus-metrics-example
+  endpoints:
+  - port: metrics
+    interval: 5s
+    path: /metrics
