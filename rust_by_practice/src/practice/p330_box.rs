@@ -4,6 +4,7 @@ mod tests {
         cell::RefCell,
         ops::{Deref, DerefMut},
         rc::{Rc, Weak},
+        sync::{Arc, Mutex},
     };
 
     #[test]
@@ -127,5 +128,40 @@ mod tests {
         *leaf.parent.borrow_mut() = Rc::downgrade(&branch);
 
         println!("{:?}", &branch);
+    }
+
+    #[test]
+    fn auto_deref_of_std_types() {
+        #[derive(Debug, Default)]
+        struct Pig();
+
+        impl Pig {
+            fn fly(&self) -> String {
+                "fly".to_string()
+            }
+
+            fn grow(&mut self) -> String {
+                "grow".to_string()
+            }
+        }
+
+        let pig = Pig::default();
+        let rc_pig = Rc::new(pig);
+        // rc_pig.fly() dereference to Pig::fly() by Deref trait of Rc automatically
+        let rc_fly = rc_pig.fly();
+        assert_eq!(rc_fly, "fly");
+
+        let pig = Pig::default();
+        let rc_pig_mut = Rc::new(RefCell::new(pig));
+        // RefMut<Pig> dereference to Pig::grow() by DerefMut trait of RefMut automatically
+        assert_eq!(rc_pig_mut.borrow_mut().grow(), "grow");
+
+        let pig = Pig::default();
+        let arc_pig = Arc::new(Mutex::new(pig));
+        // arc_pig.lock() deference to Mutex::lock() by Deref trait of Arc automatically
+        // unwrap() returns MutexGuard<Pig>, .grow() deference to Pig::grow()
+        // by DerefMut trait of MutexGuard automatically
+        let mut locked_pig = arc_pig.lock().unwrap();
+        assert_eq!(locked_pig.grow(), "grow");
     }
 }
