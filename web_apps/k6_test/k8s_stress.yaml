@@ -3,6 +3,20 @@ kind: TestRun
 metadata:
   name: stress-test
 spec:
+  arguments: "-o output-prometheus-remote"
+  runner:
+    image: docker.io/jvenom/k6-prometheus:latest
+    imagePullPolicy: IfNotPresent
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "1024Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+    env:
+    - name: "K6_PROMETHEUS_REMOTE_URL"
+      value: "http://monitoring-kube-prometheus-prometheus.monitoring.svc.smalkube.lan:9090/api/v1/write"
   parallelism: 8
   script:
     configMap:
