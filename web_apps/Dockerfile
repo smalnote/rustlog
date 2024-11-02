@@ -32,8 +32,14 @@ RUN --mount=type=bind,source=src,target=src \
     --mount=type=cache,target=/app/target/ \
     --mount=type=cache,target=/usr/local/cargo/git/db \
     --mount=type=cache,target=/usr/local/cargo/registry/ \
-cargo build --release -p web_apps --bin prometheus_metrics_example && \
-cp ./target/release/$APP_NAME /bin/server
+    cargo build --release -p web_apps \
+    --bin prometheus_metrics_example && \
+    cp ./target/release/$APP_NAME /bin/server
+# In this build environment, cargo build with target musl like
+# --target x86_64-unknown-linux-musl.
+# So the executable binary won't depend on C Library when running.
+# Verify target: docker run --rm rust:1.81.0-alpine rustup target list | grep installed
+
 
 ################################################################################
 # Create a new stage for running the application that contains the minimal
