@@ -103,4 +103,17 @@ mod tests {
         assert_eq!(v, *w);
     }
     */
+
+    #[test]
+    fn take_mutable_reference_and_leave_default() {
+        let mut greeting = "Hello, world!".to_owned();
+
+        fn take_mutable_string(value: &mut String) {
+            let took_value = std::mem::take(value);
+            assert_eq!(took_value, "Hello, world!");
+        }
+
+        take_mutable_string(&mut greeting);
+        assert_eq!(greeting, "");
+    }
 }
