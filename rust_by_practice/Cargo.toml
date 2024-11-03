@@ -11,6 +11,10 @@ license = "MIT OR Apache-2.0"
 # Abort the program immediately if panic, without unwinding call stack, cleaning up.
 # Make the resulting binary as small as possible.
 panic = "abort"
+# Link Time Optimiation
+lto = "thin"
+
+[profile.dev]
 
 [[bin]]
 name = "hello"
