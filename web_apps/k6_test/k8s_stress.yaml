@@ -20,5 +20,5 @@ spec:
   parallelism: 8
   script:
     configMap:
-      name: stress-test
+      name: stress-test-rust
       file: stress.js
