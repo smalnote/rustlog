@@ -72,7 +72,6 @@ COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
 # Expose the port that the application listens on.
 EXPOSE 3000 3001
-
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 # What the container should run when it is started.
