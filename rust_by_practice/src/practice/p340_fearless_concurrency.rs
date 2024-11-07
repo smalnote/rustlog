@@ -33,6 +33,23 @@ mod tests {
     }
 
     #[test]
+    fn test_scoped_thread_join_automatically() {
+        let count = Arc::new(Mutex::new(0_u32));
+
+        thread::scope(|s| {
+            for _ in 0..10 {
+                let thread_count = Arc::clone(&count);
+                s.spawn(move || {
+                    let mut count = thread_count.lock().unwrap();
+                    *count += 1;
+                });
+            }
+        });
+
+        assert_eq!(*count.lock().unwrap(), 10);
+    }
+
+    #[test]
     fn test_move_ownership_to_spawned_closure() {
         let message = "Hello, fearless concurrency!".to_string();
 
