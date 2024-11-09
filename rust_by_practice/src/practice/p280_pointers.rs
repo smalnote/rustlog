@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
     /*
      * Sized: In order to store value on stack, the Rust compiler needs to know the
      *   size of that memory at compilation time.
@@ -81,8 +82,6 @@ mod tests {
      */
     #[test]
     fn reference_count() {
-        use std::rc::Rc;
-
         #[derive(Debug)]
         #[allow(dead_code)]
         struct Truck {
@@ -121,6 +120,22 @@ mod tests {
             addr_of!(*team_two[0].as_ref()),
             addr_of!(*team_one[1].as_ref())
         );
+    }
+
+    #[test]
+    fn test_rc_and_ref() {
+        let truck = String::from("truck");
+        let team_truck = vec![&truck];
+        assert_eq!(team_truck[0], "truck");
+        drop(truck);
+        // assert_eq!(team_truck[0], "truck"); // failed, ownership still belong to variable truck
+
+        let car = Rc::new(String::from("car"));
+        let team_car_one = vec![Rc::clone(&car)];
+        let team_car_two = vec![Rc::clone(&car)];
+        drop(car);
+        assert_eq!(*team_car_one[0], "car");
+        assert_eq!(*team_car_two[0], "car");
     }
 
     /* Smart pointers:
