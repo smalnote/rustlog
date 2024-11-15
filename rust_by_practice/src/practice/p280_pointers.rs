@@ -123,19 +123,24 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::useless_vec)]
     fn test_rc_and_ref() {
-        let truck = String::from("truck");
-        let team_truck = vec![&truck];
-        assert_eq!(team_truck[0], "truck");
-        drop(truck);
-        // assert_eq!(team_truck[0], "truck"); // failed, ownership still belong to variable truck
+        let truck_1 = String::from("truck_1");
+        let truck_2 = String::from("truck_2");
+        let team_truck = vec![&truck_1, &truck_2];
+        assert_eq!(team_truck[0], "truck_1");
+        drop(truck_1);
+        // team_truck unavailable
+        // assert_eq!(team_truck[0], "truck"); // compilation error, ownership still belong to variable truck
 
-        let car = Rc::new(String::from("car"));
-        let team_car_one = vec![Rc::clone(&car)];
-        let team_car_two = vec![Rc::clone(&car)];
-        drop(car);
-        assert_eq!(*team_car_one[0], "car");
-        assert_eq!(*team_car_two[0], "car");
+        let car_1 = Rc::new(String::from("car_1"));
+        let car_2 = Rc::new(String::from("car_2"));
+        let car_3 = Rc::new(String::from("car_3"));
+        let team_one = vec![Rc::clone(&car_1), Rc::clone(&car_2)];
+        let team_two = vec![Rc::clone(&car_2), Rc::clone(&car_3)];
+        drop(car_1);
+        assert_eq!(*team_one[0], "car_1");
+        assert_eq!(*team_two[0], "car_2");
     }
 
     /* Smart pointers:
