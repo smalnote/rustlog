@@ -207,6 +207,25 @@ mod tests {
         assert_eq!(*value, 42);
     }
 
+    #[test]
+    fn test_unlock_manually_by_drop() {
+        let counter = Mutex::new(42_u32);
+
+        {
+            let mut counter = counter.lock().expect("failed locking counter");
+            // MutexGuard is a smart pointer, which implements `Deref` trait that dereference to wrapped data's reference(&mut u32).
+            *counter += 1;
+            // Lock release when go beyond scope, by `Drop` trait.
+        }
+
+        let mut c = counter.lock().expect("failed locking counter");
+        *c += 1;
+        drop(c); // Release lock by calling `Drop` trait of MutexGuard manually.
+
+        let c = counter.lock().expect("failed locking counter");
+        assert_eq!(*c, 44);
+    }
+
     /// Implementing Send and Sync manually is unsafe
     /// Because types that made up of Send and Sync are automatically also Send and Sync,
     /// We don't have to manually implement those traits manually. As marker traits, they
