@@ -5,17 +5,6 @@ edition = "2021"
 description = "Rust language experimental playground."
 license = "MIT OR Apache-2.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[profile.release]
-# Abort the program immediately if panic, without unwinding call stack, cleaning up.
-# Make the resulting binary as small as possible.
-panic = "abort"
-# Link Time Optimiation
-lto = "thin"
-
-[profile.dev]
-
 [[bin]]
 name = "hello"
 path = "src/bin/hello/main.rs"
