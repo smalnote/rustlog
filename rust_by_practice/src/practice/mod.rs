@@ -43,3 +43,4 @@ pub mod p410_variance;
 pub mod p420_async_pitfall;
 pub mod p430_trait_ext;
 pub mod p440_static_variable;
+pub mod p450_my_vec;
