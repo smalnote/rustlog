@@ -31,7 +31,7 @@ path = "src/bin/retaurant.rs"
 time = { version = "^0.3", features = ["local-offset"] }
 rand = "^0.8"
 utf8_slice = "1.0.0"
-twox-hash = "^1.6"
+twox-hash = "^2.0.1"
 hello_marco = { path = "../hello_marco", features = ["derive"] }
 length = { path = "../length" }
 ctrlc = "^3.0"
@@ -43,3 +43,4 @@ tokio = { version = "^1.40", features = [
     "sync",
 ] }
 axum = "^0.7"
+lazy_static = "^1.5"
