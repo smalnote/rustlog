@@ -2,7 +2,6 @@
 mod tests {
     #[test]
     fn test_procedural_marcos() {
-        #[macro_export]
         macro_rules! simple_vec {
             ( $( $x:expr ),* ) => {
                 {

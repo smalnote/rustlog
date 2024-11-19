@@ -159,13 +159,10 @@ mod tests {
         }
         println!("s = {s}");
 
-        assert_eq!(
-            (-128..128),
-            Range {
-                start: -128,
-                end: 128
-            }
-        );
+        assert_eq!((-128..128), Range {
+            start: -128,
+            end: 128
+        });
         assert_eq!(('a'..='z'), RangeInclusive::new('a', 'z'));
     }
 
@@ -207,8 +204,8 @@ mod tests {
         let hello: &str = "hello, 世界!";
         for c in hello.chars() {
             println!(
-                "char string: {c}, c.to_string().as_bytes().len() = {}",
-                c.to_string().as_bytes().len(),
+                "char string: {c}, length in bytes, c.to_string().len() = {}",
+                c.to_string().len(),
             );
         }
     }

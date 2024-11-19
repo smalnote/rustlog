@@ -8,7 +8,7 @@
 #[cfg(test)]
 mod tests {
     use std::{
-        sync::{mpsc, Arc, Mutex, RwLock},
+        sync::{Arc, Mutex, RwLock, mpsc},
         thread,
         time::Duration,
     };
@@ -231,7 +231,6 @@ mod tests {
     /// We don't have to manually implement those traits manually. As marker traits, they
     /// don't have any methods to implement. They're just useful for enforcing invariants
     /// related to concurrency.
-
     /// Allowing transference of ownership between threads with std::marker::Send trait
     /// The `Send` marker trait indicates that ownership of values of the type implementing
     /// Send can be transferred between threads.

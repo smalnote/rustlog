@@ -186,8 +186,8 @@ mod tests {
             fn awkward_len(&mut self) -> u32 {
                 let mut node = self;
                 let mut size = 0_u32;
-                while let List::Cons(_, ref mut next) = node {
-                    node = &mut **next;
+                while let List::Cons(_, next) = node {
+                    node = &mut *next;
                     size += 1;
                 }
                 size

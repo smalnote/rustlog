@@ -127,11 +127,7 @@ mod tests {
     fn return_str_reference_with_lifetime() {
         // x and y must have the same lifetime a for returning
         fn longer<'a>(x: &'a str, y: &'a str) -> &'a str {
-            if x.len() > y.len() {
-                x
-            } else {
-                y
-            }
+            if x.len() > y.len() { x } else { y }
         }
 
         let x = "long";
@@ -351,7 +347,6 @@ mod tests {
             }
 
             #[allow(clippy::needless_lifetimes)]
-
             fn print<'a>(&'a self) {
                 println!("`print:`: {}", self.0);
             }
@@ -477,6 +472,7 @@ mod tests {
         }
 
         #[allow(clippy::needless_lifetimes)]
+        #[allow(elided_named_lifetimes)]
         fn __first_world<'a>(s: &'a str) -> &str {
             s
         }

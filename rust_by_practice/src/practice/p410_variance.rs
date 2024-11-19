@@ -1,4 +1,4 @@
-/// Subtypeing and Variance
+/// Subtyping and Variance
 ///
 /// Subtype: if a type `Sub` can be coerced to another type `Super`, donated as `Sub` <: `Super`
 /// Example: 'static <: 'a, meaning lifetime 'static can be use as a shorter lifetime 'a
@@ -10,7 +10,6 @@
 /// Contravariant: F is contravariant if, F<Super> is subtype of F<Sub>
 /// Example: fn(P), for P of &'a T and &'b T, where 'a <: 'b, fn(&'b T) <: fn(&'a T)
 /// Explanation: fn(&'b T) accept a shorter lifetime 'b, can be use to accept a longer lifetime 'a
-
 #[cfg(test)]
 mod tests {
 
