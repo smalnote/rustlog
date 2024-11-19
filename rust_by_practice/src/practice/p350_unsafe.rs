@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use std::slice;
+    use std::{cell::RefCell, slice};
 
     #[test]
     fn test_unsafe_split_slice() {
@@ -28,7 +28,7 @@ mod tests {
     #[test]
     fn test_calling_c_function_within_unsafe_block() {
         // `"C"` defines thc C language's ABI(application binary interface)
-        extern "C" {
+        unsafe extern "C" {
             fn abs(value: i32) -> i32;
         }
 
@@ -45,13 +45,17 @@ mod tests {
     /// Constants are allowed to duplicate their data whenever they're used.
     #[test]
     fn accessing_static_variable_is_unsafe() {
-        static mut COUNTER: u32 = 0;
+        use std::sync::Mutex;
+        static COUNTER: Mutex<RefCell<u32>> = Mutex::new(RefCell::new(0));
 
-        unsafe {
-            COUNTER += 42;
-
-            assert_eq!(COUNTER, 42);
+        {
+            let counter = COUNTER.lock().expect("acquire counter lock failed");
+            let mut counter = counter.borrow_mut();
+            *counter += 42;
+            // contain MutexGuard in block, release when go beyond block
         }
+
+        assert_eq!(*COUNTER.lock().unwrap().borrow(), 42);
     }
 
     /// A trait is unsafe when at least one of its methods has some invariant that

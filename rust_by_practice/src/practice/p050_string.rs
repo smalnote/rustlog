@@ -48,7 +48,7 @@ mod tests {
             "Unicode point: {}, Character name: {}",
             unicode_code_point, character_name
         );
-        assert_eq!(unicode_code_point.as_bytes().len(), 3);
+        assert_eq!(unicode_code_point.len(), 3);
     }
 
     // multiple lines string
