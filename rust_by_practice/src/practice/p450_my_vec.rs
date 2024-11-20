@@ -196,6 +196,12 @@ mod tests {
             // for _ in self {}
             // for _ in &mut *self{} // borrow of moved value: `self` value borrowed here after move
             // ```
+            // Drain impl Iterator -> &mut Drain impl Iterator -> &mut Drain impl IntoIterator
+            // Drain impl Iterator also-> Drain impl Iterator
+            // Relies on generic traits from std::iter
+            // impl<I: Iterator + ?Sized> Iterator for &mut I
+            // impl<I: Iterator> IntoIterator for I {}
+            // actually call on (&mut *self).into_iter();
             for _ in &mut *self {}
         }
     }
