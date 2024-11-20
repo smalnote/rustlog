@@ -50,66 +50,6 @@ mod tests {
     unsafe impl<T: Send> Send for MyVec<T> {}
     unsafe impl<T: Sync> Sync for MyVec<T> {}
 
-    struct RawVec<T> {
-        ptr: NonNull<T>,
-        cap: usize,
-    }
-
-    // MyVec<T> is Send if T is Send
-    unsafe impl<T: Send> Send for RawVec<T> {}
-    unsafe impl<T: Sync> Sync for RawVec<T> {}
-
-    impl<T> RawVec<T> {
-        fn new() -> RawVec<T> {
-            RawVec {
-                ptr: NonNull::dangling(),
-                cap: if size_of::<T>() == 0 { usize::MAX } else { 0 },
-            }
-        }
-
-        fn grow(&mut self) {
-            // since cap set to usize::MAX for ZSTs, grow for ZSTs would overflow
-            assert!(size_of::<T>() != 0, "capacity overflow");
-
-            let (new_cap, new_layout) = if self.cap == 0 {
-                (1, Layout::array::<T>(1).unwrap())
-            } else {
-                let new_cap = 2 * self.cap;
-                (new_cap, Layout::array::<T>(new_cap).unwrap())
-            };
-
-            assert!(
-                new_layout.size() <= isize::MAX as usize,
-                "Allocation too large"
-            );
-
-            let new_ptr = if self.cap == 0 {
-                unsafe { alloc::alloc(new_layout) }
-            } else {
-                let old_layout = Layout::array::<T>(self.cap).unwrap();
-                let old_ptr = self.ptr.as_ptr() as *mut u8;
-                unsafe { alloc::realloc(old_ptr, old_layout, new_layout.size()) }
-            };
-
-            self.ptr = match NonNull::new(new_ptr as *mut T) {
-                Some(ptr) => ptr,
-                None => alloc::handle_alloc_error(new_layout),
-            };
-            self.cap = new_cap;
-        }
-    }
-
-    impl<T> Drop for RawVec<T> {
-        fn drop(&mut self) {
-            if self.cap != 0 && size_of::<T>() != 0 {
-                let layout = Layout::array::<T>(self.cap).unwrap();
-                unsafe {
-                    dealloc(self.ptr.as_ptr() as *mut u8, layout);
-                }
-            }
-        }
-    }
-
     impl<T> MyVec<T> {
         fn new() -> MyVec<T> {
             MyVec {
@@ -181,11 +121,14 @@ mod tests {
 
             elem
         }
-    }
 
-    impl<T> Drop for MyVec<T> {
-        fn drop(&mut self) {
-            while self.pop().is_some() {}
+        fn drain(&mut self) -> Drain<T> {
+            let iter = unsafe { RawValIter::new(self) };
+            self.len = 0;
+            Drain {
+                vec: PhantomData,
+                iter,
+            }
         }
     }
 
@@ -220,6 +163,12 @@ mod tests {
         }
     }
 
+    impl<T> Drop for MyVec<T> {
+        fn drop(&mut self) {
+            while self.pop().is_some() {}
+        }
+    }
+
     impl<T> Iterator for IntoIter<T> {
         type Item = T;
         fn next(&mut self) -> Option<Self::Item> {
@@ -248,6 +197,101 @@ mod tests {
             // for _ in &mut *self{} // borrow of moved value: `self` value borrowed here after move
             // ```
             for _ in &mut *self {}
+        }
+    }
+
+    use std::marker::PhantomData;
+
+    struct Drain<'a, T: 'a> {
+        // Need to bound the lifetime here, so we do it with `&'a mut MyVec<T>`
+        // because that's semantically what we contain. We're just calling
+        // `pop()` and `remove(0)`
+        vec: PhantomData<&'a mut MyVec<T>>,
+        iter: RawValIter<T>,
+    }
+
+    #[allow(clippy::needless_lifetimes)]
+    impl<'a, T> Iterator for Drain<'a, T> {
+        type Item = T;
+        fn next(&mut self) -> Option<Self::Item> {
+            self.iter.next()
+        }
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            self.iter.size_hint()
+        }
+    }
+
+    #[allow(clippy::needless_lifetimes)]
+    impl<'a, T> DoubleEndedIterator for Drain<'a, T> {
+        fn next_back(&mut self) -> Option<Self::Item> {
+            self.iter.next_back()
+        }
+    }
+
+    #[allow(clippy::needless_lifetimes)]
+    impl<'a, T> Drop for Drain<'a, T> {
+        fn drop(&mut self) {
+            for _ in &mut *self {}
+        }
+    }
+
+    struct RawVec<T> {
+        ptr: NonNull<T>,
+        cap: usize,
+    }
+
+    // MyVec<T> is Send if T is Send
+    unsafe impl<T: Send> Send for RawVec<T> {}
+    unsafe impl<T: Sync> Sync for RawVec<T> {}
+
+    impl<T> RawVec<T> {
+        fn new() -> RawVec<T> {
+            RawVec {
+                ptr: NonNull::dangling(),
+                cap: if size_of::<T>() == 0 { usize::MAX } else { 0 },
+            }
+        }
+
+        fn grow(&mut self) {
+            // since cap set to usize::MAX for ZSTs, grow for ZSTs would overflow
+            assert!(size_of::<T>() != 0, "capacity overflow");
+
+            let (new_cap, new_layout) = if self.cap == 0 {
+                (1, Layout::array::<T>(1).unwrap())
+            } else {
+                let new_cap = 2 * self.cap;
+                (new_cap, Layout::array::<T>(new_cap).unwrap())
+            };
+
+            assert!(
+                new_layout.size() <= isize::MAX as usize,
+                "Allocation too large"
+            );
+
+            let new_ptr = if self.cap == 0 {
+                unsafe { alloc::alloc(new_layout) }
+            } else {
+                let old_layout = Layout::array::<T>(self.cap).unwrap();
+                let old_ptr = self.ptr.as_ptr() as *mut u8;
+                unsafe { alloc::realloc(old_ptr, old_layout, new_layout.size()) }
+            };
+
+            self.ptr = match NonNull::new(new_ptr as *mut T) {
+                Some(ptr) => ptr,
+                None => alloc::handle_alloc_error(new_layout),
+            };
+            self.cap = new_cap;
+        }
+    }
+
+    impl<T> Drop for RawVec<T> {
+        fn drop(&mut self) {
+            if self.cap != 0 && size_of::<T>() != 0 {
+                let layout = Layout::array::<T>(self.cap).unwrap();
+                unsafe {
+                    dealloc(self.ptr.as_ptr() as *mut u8, layout);
+                }
+            }
         }
     }
 
@@ -321,45 +365,6 @@ mod tests {
                         Some(read(self.end))
                     }
                 }
-            }
-        }
-    }
-
-    use std::marker::PhantomData;
-
-    struct Drain<'a, T: 'a> {
-        // Need to bound the lifetime here, so we do it with `&'a mut MyVec<T>`
-        // because that's semantically what we contain. We're just calling
-        // `pop()` and `remove(0)`
-        vec: PhantomData<&'a mut MyVec<T>>,
-        iter: RawValIter<T>,
-    }
-
-    #[allow(clippy::needless_lifetimes)]
-    impl<'a, T> Iterator for Drain<'a, T> {
-        type Item = T;
-        fn next(&mut self) -> Option<Self::Item> {
-            self.iter.next()
-        }
-        fn size_hint(&self) -> (usize, Option<usize>) {
-            self.iter.size_hint()
-        }
-    }
-
-    #[allow(clippy::needless_lifetimes)]
-    impl<'a, T> DoubleEndedIterator for Drain<'a, T> {
-        fn next_back(&mut self) -> Option<Self::Item> {
-            self.iter.next_back()
-        }
-    }
-
-    impl<T> MyVec<T> {
-        fn drain(&mut self) -> Drain<T> {
-            let iter = unsafe { RawValIter::new(self) };
-            self.len = 0;
-            Drain {
-                vec: PhantomData,
-                iter,
             }
         }
     }
