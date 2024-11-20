@@ -10,12 +10,15 @@ pub enum LogLevel {
 struct Logger();
 
 impl Logger {
+    #[allow(dead_code)]
     fn debug(&self, msg: &str) {
         if *LOG_LEVEL.lock().unwrap().borrow() as u32 > LogLevel::Debug as u32 {
             return;
         }
         println!("debug: {}", msg);
     }
+
+    #[allow(dead_code)]
     fn error(&self, msg: &str) {
         if *LOG_LEVEL.lock().unwrap().borrow() as u32 > LogLevel::Error as u32 {
             return;
