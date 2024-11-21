@@ -11,6 +11,8 @@ mod tests {
      *   the provided iterator.
      */
 
+    use std::collections::HashSet;
+
     #[test]
     fn iterate_vector() {
         let v = vec![1, 2, 3];
@@ -50,13 +52,10 @@ mod tests {
 
         assert_eq!(v.len(), 150);
 
-        assert_eq!(
-            100..150,
-            Range {
-                start: 100,
-                end: 150
-            }
-        );
+        assert_eq!(100..150, Range {
+            start: 100,
+            end: 150
+        });
 
         assert_eq!(100..=150, RangeInclusive::new(100, 150))
     }
@@ -161,5 +160,30 @@ mod tests {
         for (i, v) in fib20 {
             println!("key = {}, value = {}", i, v);
         }
+    }
+
+    #[test]
+    fn test_result_from_iterator() {
+        let colors: Vec<String> = vec!["red".into(), "cyan".into(), "yellow".into()];
+
+        let three_primary_colors = HashSet::from(["red", "yellow", "blue"]);
+        let is_primary_colors = move |color: &str| three_primary_colors.contains(color);
+
+        let primary_colors: Vec<Result<String, String>> = colors
+            .into_iter()
+            .map(|color| match is_primary_colors(&color) {
+                true => Ok(color),
+                false => Err(color),
+            })
+            .collect();
+
+        dbg!(&primary_colors);
+
+        // Vec<Result<String, String>> -> Result<Vec<String>, String>
+        // Result implements FromIterator
+        // impl<A, E, V: FromIterator<A>> FromIterator<Result<A, E>> for Result<V, E>
+        let primary_colors: Result<Vec<String>, String> = primary_colors.into_iter().collect();
+        dbg!(&primary_colors);
+        assert_eq!(&primary_colors, &Err("cyan".to_string()));
     }
 }
