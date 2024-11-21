@@ -34,7 +34,9 @@ mod tests {
         // println!("{:?}", *hello.ptr); // use after free
     }
 
-    use std::alloc::{self, Layout, dealloc};
+    use std::alloc::{self, Layout, alloc, dealloc};
+    use std::collections::HashSet;
+    use std::fmt::Debug;
     use std::mem::{self, size_of};
     use std::ops::{Deref, DerefMut};
     use std::ptr::{NonNull, copy, read, write};
@@ -54,6 +56,13 @@ mod tests {
         fn new() -> MyVec<T> {
             MyVec {
                 buf: RawVec::new(),
+                len: 0,
+            }
+        }
+
+        fn with_capacity(cap: usize) -> MyVec<T> {
+            MyVec {
+                buf: RawVec::with_capacity(cap),
                 len: 0,
             }
         }
@@ -132,6 +141,13 @@ mod tests {
         }
     }
 
+    impl<T: Debug> Debug for MyVec<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let slice: &[T] = self;
+            write!(f, "{:?}", slice)
+        }
+    }
+
     impl<T> Deref for MyVec<T> {
         type Target = [T];
         fn deref(&self) -> &Self::Target {
@@ -160,6 +176,18 @@ mod tests {
                 mem::forget(self);
                 IntoIter { _buf: buf, iter }
             }
+        }
+    }
+
+    impl<I> FromIterator<I> for MyVec<I> {
+        fn from_iter<T: IntoIterator<Item = I>>(iter: T) -> Self {
+            let iter = iter.into_iter();
+            let (size, _) = iter.size_hint();
+            let mut my_vec = MyVec::with_capacity(size);
+            for item in iter {
+                my_vec.push(item);
+            }
+            my_vec
         }
     }
 
@@ -256,6 +284,24 @@ mod tests {
                 ptr: NonNull::dangling(),
                 cap: if size_of::<T>() == 0 { usize::MAX } else { 0 },
             }
+        }
+
+        fn with_capacity(cap: usize) -> RawVec<T> {
+            if cap == 0 {
+                return Self::new();
+            }
+            let (ptr, cap) = if size_of::<T>() == 0 {
+                (NonNull::dangling(), usize::MAX)
+            } else {
+                let layout = Layout::array::<T>(cap).unwrap();
+                let raw_ptr = unsafe { alloc(layout) as *mut T };
+                let ptr = match NonNull::new(raw_ptr) {
+                    Some(null_ptr) => null_ptr,
+                    None => alloc::handle_alloc_error(layout),
+                };
+                (ptr, cap)
+            };
+            RawVec { ptr, cap }
         }
 
         fn grow(&mut self) {
@@ -418,5 +464,23 @@ mod tests {
         assert_eq!(rest_numbers, vec![1, 3]);
 
         assert!(numbers.is_empty());
+    }
+
+    #[test]
+    fn test_from_iterator() {
+        let set: HashSet<String> = HashSet::from([
+            "alpha".into(),
+            "bravo".into(),
+            "caesar".into(),
+            "delta".into(),
+        ]);
+
+        // MyVec implements FromIterator
+        // let my_vec = MyVec::<String>::from_iter(set.clone().into_iter());
+        // Iterator::collect() use FromIterator automatically
+        let my_vec: MyVec<String> = set.clone().into_iter().collect();
+        dbg!(&my_vec);
+        let new_set: HashSet<String> = my_vec.into_iter().collect();
+        assert_eq!(set, new_set);
     }
 }
