@@ -27,9 +27,11 @@ mod tests {
         marker::PhantomData,
         ops::Deref,
         ptr::NonNull,
-        sync::atomic,
-        thread::{self, sleep},
-        time::Duration,
+        sync::{
+            Arc,
+            atomic::{self},
+        },
+        thread::{self},
     };
 
     struct MyArc<T> {
@@ -97,25 +99,50 @@ mod tests {
             // This fence is needed to prevent reordering of the use and deletion
             // of the data.
             atomic::fence(atomic::Ordering::Acquire);
-            dbg!("reference count is zero, cleanup data");
             unsafe {
                 let _ = Box::from_raw(self.ptr.as_ptr());
-            }
+            };
+        }
+    }
+    struct DropDbg {}
+
+    impl Drop for DropDbg {
+        fn drop(&mut self) {
+            dbg!(self as *const Self);
         }
     }
 
     #[test]
     fn test_my_arc() {
-        let number = MyArc::new(42);
+        let drop_indicator = MyArc::new(DropDbg {});
 
         thread::scope(|scoped| {
-            for i in 0..5 {
-                let number = number.clone();
+            for _ in 0..10 {
+                let number_ref = drop_indicator.clone();
                 scoped.spawn(move || {
-                    sleep(Duration::from_millis(5 - i));
-                    dbg!(i, *number)
+                    for _ in 0..1000 {
+                        let _ = number_ref.clone();
+                    }
                 });
             }
-        })
+            drop(drop_indicator);
+        });
+    }
+
+    #[test]
+    fn test_arc() {
+        let drop_indicator = Arc::new(DropDbg {});
+
+        thread::scope(|scoped| {
+            for _ in 0..10 {
+                let number_ref = drop_indicator.clone();
+                scoped.spawn(move || {
+                    for _ in 0..1000 {
+                        let _ = number_ref.clone();
+                    }
+                });
+            }
+            drop(drop_indicator);
+        });
     }
 }
