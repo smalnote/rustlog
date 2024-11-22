@@ -133,6 +133,17 @@ mod tests {
 
         fn drain(&mut self) -> Drain<T> {
             let iter = unsafe { RawValIter::new(self) };
+            // Here Drain only take RawValIter(start, end) from MyVec,
+            // What if Drain doesn't consume all elements first,
+            // and MyVec write new element to range within RawValIter(start, end).
+            // This might cause leak.
+            // The answer is impossible:
+            // drain(&mut self) take mutable reference of MyVec
+            // Meaning before the returned Drain instance going out of scope and Drop,
+            // there is no chance to borrow mutable MyVec and mutate it.
+            // If Drain if forgotten, we just leak the whole MyVec's contents.
+            // But for MyVec, elements are handed over to Drain, set len to
+            // zero is safe here.
             self.len = 0;
             Drain {
                 vec: PhantomData,
@@ -265,6 +276,7 @@ mod tests {
     #[allow(clippy::needless_lifetimes)]
     impl<'a, T> Drop for Drain<'a, T> {
         fn drop(&mut self) {
+            dbg!("drop rest elements in drain");
             for _ in &mut *self {}
         }
     }
@@ -459,10 +471,13 @@ mod tests {
         numbers.remove(2);
         numbers.remove(0);
 
-        let rest_numbers: Vec<i32> = numbers.drain().collect();
+        {
+            let mut drain = numbers.drain();
+            assert_eq!(drain.next(), Some(1));
+            dbg!("leave drain with one element");
+        }
 
-        assert_eq!(rest_numbers, vec![1, 3]);
-
+        dbg!("operating in place");
         assert!(numbers.is_empty());
     }
 
