@@ -90,6 +90,14 @@ mod tests {
         }
     }
 
+    /// Impossible case:
+    /// Ref A          Ref B
+    /// create rc + 1
+    /// drop   rc - 1
+    ///                create rc + 1 (Depend on a valid Ref, while A is dropping, so this is impossible)
+    ///                drop   rc - 1
+    ///                delete
+    /// delete
     impl<T> Drop for MyArc<T> {
         fn drop(&mut self) {
             let inner = unsafe { self.ptr.as_ref() };

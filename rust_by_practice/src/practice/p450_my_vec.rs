@@ -49,8 +49,10 @@ mod tests {
     }
 
     // MyVec<T> is Send if T is Send
-    unsafe impl<T: Send> Send for MyVec<T> {}
-    unsafe impl<T: Sync> Sync for MyVec<T> {}
+    // Since both buf and len inside MyVec<T> is Send and Sync
+    // MyVec<T> as a trivial wrap of them, is derived Send and Sync
+    // unsafe impl<T: Send> Send for MyVec<T> {}
+    // unsafe impl<T: Sync> Sync for MyVec<T> {}
 
     impl<T> MyVec<T> {
         fn new() -> MyVec<T> {
@@ -246,6 +248,7 @@ mod tests {
     }
 
     use std::marker::PhantomData;
+    use std::thread;
 
     struct Drain<'a, T: 'a> {
         // Need to bound the lifetime here, so we do it with `&'a mut MyVec<T>`
@@ -497,5 +500,25 @@ mod tests {
         dbg!(&my_vec);
         let new_set: HashSet<String> = my_vec.into_iter().collect();
         assert_eq!(set, new_set);
+    }
+
+    #[test]
+    fn my_vec_send_trait() {
+        let mut vec = MyVec::new();
+        vec.push(42);
+
+        thread::scope(|scoped| {
+            for _ in 0..4 {
+                scoped.spawn(|| {
+                    dbg!(&vec); // &MyVec<T: Send>: Send
+                });
+            }
+        });
+
+        thread::spawn(move || {
+            dbg!(vec); // MyVec<T: Send>: Send
+        })
+        .join()
+        .unwrap();
     }
 }
