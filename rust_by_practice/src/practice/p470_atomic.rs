@@ -35,6 +35,12 @@ mod tests {
             // might reorder the data operation go beyond the locked scoped.
             // Ordering::Acquire make sure data operation won't be reordered before
             // this locked instruction.
+            // AtomicXxx.compare_exchange_weak vs AtomicXxx.compare_exchange
+            // _weak version is optimization for ARM
+            // x86: CAS
+            // ARM: LDREX STREX (load, store, two instruction with verification)
+            //   - compare_exchange: loop LDREX STREX, only failed when current value is not expected
+            //   - compare_exchange_weak: LDREX STREX, might failed spuriously
             while self
                 .locked
                 .compare_exchange_weak(
@@ -58,7 +64,10 @@ mod tests {
         }
     }
 
-    unsafe impl<T: Sync> Sync for AtomicMutex<T> {}
+    // In AtomicMutex, T is always accessed exclusively, so Sync is guaranteed by AtomicMutex
+    // There is no need for T to be Sync.
+    // For RwLock<T>, T can be read simultaneously, so T for RwLock must be Send.
+    unsafe impl<T: Send> Sync for AtomicMutex<T> {}
 
     #[test]
     fn test_atomic_mutex() {
