@@ -45,3 +45,4 @@ pub mod p430_trait_ext;
 pub mod p440_static_variable;
 pub mod p450_my_vec;
 pub mod p460_my_arc;
+pub mod p470_atomic;
