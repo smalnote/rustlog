@@ -47,3 +47,4 @@ pub mod p450_my_vec;
 pub mod p460_my_arc;
 pub mod p470_atomic;
 pub mod p480_condvar;
+pub mod p490_semaphore;
