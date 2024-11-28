@@ -258,8 +258,7 @@ mod tests {
         iter: RawValIter<T>,
     }
 
-    #[allow(clippy::needless_lifetimes)]
-    impl<'a, T> Iterator for Drain<'a, T> {
+    impl<T> Iterator for Drain<'_, T> {
         type Item = T;
         fn next(&mut self) -> Option<Self::Item> {
             self.iter.next()
@@ -269,8 +268,7 @@ mod tests {
         }
     }
 
-    #[allow(clippy::needless_lifetimes)]
-    impl<'a, T> DoubleEndedIterator for Drain<'a, T> {
+    impl<T> DoubleEndedIterator for Drain<'_, T> {
         fn next_back(&mut self) -> Option<Self::Item> {
             self.iter.next_back()
         }
