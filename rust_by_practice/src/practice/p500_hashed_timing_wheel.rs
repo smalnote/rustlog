@@ -11,20 +11,22 @@ use std::{
 };
 
 pub struct HashedTimingWheel {
-    tick: u64,
+    /// Tick count from timer start, time elapsed since timer start is
+    /// current_tick * tick_duration
+    current_tick: u64,
     tick_duration: Duration,
     wheel: Vec<Bucket>,
     worker_state: Arc<AtomicU8>,
 
-    /// wheel size -> 2^n -> -1 for modulo
+    /// The wheel size is round up to nearest 2^n, mask = 2^n -1,
+    /// so bucket_index = expired_tick % 2^n = expired_tick & mask
     mask: u64,
 
     /// TODO: add constraint for max pending timeouts
     /// System clock, as the time origin or epoch for this timer
     epoch: Instant,
     /// System clock nano seconds when worker thread start
-    /// TODO: nano seconds prefer u128
-    start_time: u64,
+    start_time: u128,
 
     incoming_queue: mpsc::Receiver<Timeout>,
     unprocessed_timeouts: Vec<Timeout>,
@@ -62,7 +64,7 @@ impl HashedTimingWheel {
         let mask = (wheel.len() - 1) as u64;
 
         Self {
-            tick: 0,
+            current_tick: 0,
             tick_duration,
             wheel,
             worker_state: Arc::new(AtomicU8::new(Self::WORKER_STATE_INIT)),
@@ -99,7 +101,7 @@ impl HashedTimingWheel {
                     )
                     .is_ok()
                 {
-                    self.start_time = self.epoch.elapsed().as_nanos() as u64;
+                    self.start_time = self.epoch.elapsed().as_nanos();
                     dbg!(self.start_time);
                     loop {
                         let deadline = self.wait_for_next_tick();
@@ -125,21 +127,21 @@ impl HashedTimingWheel {
         }
     }
 
-    fn wait_for_next_tick(&self) -> u64 {
-        let deadline = self.tick_duration.as_nanos() as u64 * (self.tick + 1);
+    fn wait_for_next_tick(&self) -> u128 {
+        let deadline = self.tick_duration.as_nanos() * (self.current_tick + 1) as u128;
         loop {
-            let current = self.epoch.elapsed().as_nanos() as u64 - self.start_time;
+            let current = self.epoch.elapsed().as_nanos() - self.start_time;
             if deadline <= current {
                 return current;
             }
-            let sleep_ms = (deadline - current + 999_999) / 1_000_000;
+            let sleep_ms = ((deadline - current + 999_999) / 1_000_000) as u64;
             thread::sleep(Duration::from_millis(sleep_ms));
         }
     }
 
     fn do_tick(&mut self) -> &mut Bucket {
-        let index = self.tick & self.mask;
-        self.tick += 1;
+        let index = self.current_tick & self.mask;
+        self.current_tick += 1;
         &mut self.wheel[index as usize]
     }
 
@@ -155,15 +157,15 @@ impl HashedTimingWheel {
             if timeout.is_cancelled() {
                 continue;
             }
-            let mut expired_tick = timeout.deadline / self.tick_duration.as_nanos() as u64;
-            if expired_tick < self.tick {
+            let mut expired_tick = (timeout.deadline / self.tick_duration.as_nanos()) as u64;
+            if expired_tick < self.current_tick {
                 // Ensure we don't schedule for past
-                expired_tick = self.tick
+                expired_tick = self.current_tick
             }
-            timeout.rounds = if expired_tick < self.tick {
+            timeout.rounds = if expired_tick < self.current_tick {
                 0
             } else {
-                (expired_tick - self.tick) / self.wheel.len() as u64
+                (expired_tick - self.current_tick) / self.wheel.len() as u64
             };
             let bucket_index = (expired_tick & self.mask) as usize;
             println!(
@@ -253,7 +255,7 @@ impl Bucket {
         }
     }
 
-    fn expire_timeouts(&mut self, deadline: u64) {
+    fn expire_timeouts(&mut self, deadline: u128) {
         let mut cursor = self.head;
         while let Some(node_ptr) = cursor {
             let node = unsafe { &mut *node_ptr.as_ptr() };
@@ -325,7 +327,7 @@ impl Drop for Drain<'_> {
 pub struct Timeout {
     task: Box<dyn FnOnce()>,
     /// Nano seconds offset beyond the timing wheel start time.
-    deadline: u64,
+    deadline: u128,
     /// Thread safe state.
     state: AtomicU8,
     /// The wheel level of task, when equal to zero, task is expiring, should be
@@ -341,10 +343,10 @@ impl Timeout {
     pub const STATE_CANCELLED: u8 = 1;
     pub const STATE_EXPIRED: u8 = 2;
 
-    pub fn new(task: Box<dyn FnOnce()>, deadline: u64) -> Timeout {
+    pub fn new(task: Box<dyn FnOnce()>, deadline: u128) -> Timeout {
         Timeout {
             task,
-            deadline, // TODO: deadline base on timer start_time
+            deadline,
             state: AtomicU8::new(Self::STATE_INIT),
             rounds: 0,
         }
@@ -413,7 +415,7 @@ mod tests {
                                 SystemTime::now(),
                             );
                         }),
-                        Duration::from_secs(i).as_nanos() as u64,
+                        Duration::from_secs(i).as_nanos(),
                     );
                     tx.send(timeout).unwrap();
                 }
