@@ -13,34 +13,47 @@ use std::{
 pub struct HashedTimingWheel {
     /// Tick count from timer start, time elapsed since timer start is
     /// current_tick * tick_duration
-    current_tick: u64,
-    tick_duration: Duration,
+    current_tick: usize,
+    tick_duration_ns: u128,
     wheel: Vec<Bucket>,
-    worker_state: Arc<AtomicU8>,
 
     /// The wheel size is round up to nearest 2^n, mask = 2^n -1,
     /// so bucket_index = expired_tick % 2^n = expired_tick & mask
-    mask: u64,
+    mask: usize,
 
-    /// TODO: add constraint for max pending timeouts
-    /// System clock, as the time origin or epoch for this timer
+    // TODO: add constraint for max pending timeouts
+    /// System clock, as the time origin or epoch of timer start
     epoch: Instant,
-    /// System clock nano seconds when worker thread start
-    start_time: u128,
+
+    pub(crate) worker_state: Arc<AtomicU8>,
 
     incoming_queue: mpsc::Receiver<Timeout>,
     unprocessed_timeouts: Vec<Timeout>,
 }
 
-pub struct Handle {
-    worker_state: Arc<AtomicU8>,
+#[derive(Debug, Clone)]
+pub struct Timer {
+    epoch: Instant,
+    task_sender: mpsc::Sender<Timeout>,
+    timer_worker_state: Arc<AtomicU8>,
 }
 
-/// TODO: create timeout from start time.
-impl Handle {
-    pub fn stop(&self) {
-        self.worker_state
+impl Timer {
+    pub fn stop_timer(&self) {
+        self.timer_worker_state
             .store(HashedTimingWheel::WORKER_STATE_SHUTDOWN, Ordering::Relaxed);
+    }
+
+    pub fn new_timeout<F>(&self, f: F, delay: Duration) -> Result<(), mpsc::SendError<Timeout>>
+    where
+        F: FnOnce(),
+        F: Send + 'static,
+    {
+        let deadline = (Instant::now() + delay)
+            .duration_since(self.epoch)
+            .as_nanos();
+        let timeout = Timeout::new(Box::new(f), deadline);
+        self.task_sender.send(timeout)
     }
 }
 
@@ -49,34 +62,50 @@ impl HashedTimingWheel {
     const WORKER_STATE_STARTED: u8 = 1;
     const WORKER_STATE_SHUTDOWN: u8 = 2;
 
-    /// TODO: return handler, not the timer
-    pub fn new(
+    pub fn with_default() -> Timer {
+        let epoch = Instant::now();
+        let (tx, rx) = mpsc::channel();
+        let mut timing_wheel = HashedTimingWheel::new(Duration::from_millis(100), 512, epoch, rx);
+        let timer = Timer {
+            epoch,
+            task_sender: tx,
+            timer_worker_state: timing_wheel.worker_state.clone(),
+        };
+        thread::spawn(move || {
+            timing_wheel.start();
+        });
+        timer
+    }
+
+    fn new(
         tick_duration: Duration,
         ticks_per_wheel: usize,
         epoch: Instant,
         incoming_queue: mpsc::Receiver<Timeout>,
     ) -> HashedTimingWheel {
         assert!(
-            ticks_per_wheel > 0,
-            "ticks per wheel must greater than zero"
+            ticks_per_wheel >= 64,
+            "ticks per wheel must not less than 64"
         );
-        let wheel = Self::create_wheel(ticks_per_wheel);
-        let mask = (wheel.len() - 1) as u64;
+        assert!(
+            tick_duration.as_millis() >= 10,
+            "tick duration must not less than 10ms"
+        );
+        let (wheel, mask) = Self::create_wheel(ticks_per_wheel);
 
         Self {
             current_tick: 0,
-            tick_duration,
+            tick_duration_ns: tick_duration.as_nanos(),
             wheel,
             worker_state: Arc::new(AtomicU8::new(Self::WORKER_STATE_INIT)),
             mask,
             epoch,
-            start_time: 0,
             incoming_queue,
             unprocessed_timeouts: Vec::new(),
         }
     }
 
-    fn create_wheel(ticks_per_wheel: usize) -> Vec<Bucket> {
+    fn create_wheel(ticks_per_wheel: usize) -> (Vec<Bucket>, usize) {
         let mut n = 1_usize;
         while n < ticks_per_wheel {
             n <<= 1;
@@ -85,7 +114,7 @@ impl HashedTimingWheel {
         for _ in 0..n {
             wheel.push(Bucket::new());
         }
-        wheel
+        (wheel, n - 1)
     }
 
     pub fn start(&mut self) {
@@ -101,8 +130,6 @@ impl HashedTimingWheel {
                     )
                     .is_ok()
                 {
-                    self.start_time = self.epoch.elapsed().as_nanos();
-                    dbg!(self.start_time);
                     loop {
                         let deadline = self.wait_for_next_tick();
                         self.transfer_timeouts_to_bucket();
@@ -121,16 +148,10 @@ impl HashedTimingWheel {
         self.collect_unprocessed_timeouts();
     }
 
-    pub fn handle(&self) -> Handle {
-        Handle {
-            worker_state: self.worker_state.clone(),
-        }
-    }
-
     fn wait_for_next_tick(&self) -> u128 {
-        let deadline = self.tick_duration.as_nanos() * (self.current_tick + 1) as u128;
+        let deadline = self.tick_duration_ns * (self.current_tick + 1) as u128;
         loop {
-            let current = self.epoch.elapsed().as_nanos() - self.start_time;
+            let current = self.epoch.elapsed().as_nanos();
             if deadline <= current {
                 return current;
             }
@@ -142,7 +163,7 @@ impl HashedTimingWheel {
     fn do_tick(&mut self) -> &mut Bucket {
         let index = self.current_tick & self.mask;
         self.current_tick += 1;
-        &mut self.wheel[index as usize]
+        &mut self.wheel[index]
     }
 
     fn transfer_timeouts_to_bucket(&mut self) {
@@ -157,7 +178,7 @@ impl HashedTimingWheel {
             if timeout.is_cancelled() {
                 continue;
             }
-            let mut expired_tick = (timeout.deadline / self.tick_duration.as_nanos()) as u64;
+            let mut expired_tick = (timeout.deadline / self.tick_duration_ns) as usize;
             if expired_tick < self.current_tick {
                 // Ensure we don't schedule for past
                 expired_tick = self.current_tick
@@ -165,9 +186,9 @@ impl HashedTimingWheel {
             timeout.rounds = if expired_tick < self.current_tick {
                 0
             } else {
-                (expired_tick - self.current_tick) / self.wheel.len() as u64
+                (expired_tick - self.current_tick) / self.wheel.len()
             };
-            let bucket_index = (expired_tick & self.mask) as usize;
+            let bucket_index = expired_tick & self.mask;
             println!(
                 "bucket_index: {}, timeout rounds: {}, timeout deadline: {}",
                 bucket_index, timeout.rounds, timeout.deadline
@@ -325,25 +346,24 @@ impl Drop for Drain<'_> {
 }
 
 pub struct Timeout {
-    task: Box<dyn FnOnce()>,
+    task: Box<dyn FnOnce() + Send + 'static>,
     /// Nano seconds offset beyond the timing wheel start time.
     deadline: u128,
     /// Thread safe state.
     state: AtomicU8,
     /// The wheel level of task, when equal to zero, task is expiring, should be
     /// executed.
-    rounds: u64,
+    rounds: usize,
 }
 
-/// TODO: Box<dyn FnOnce()> can be !Send, try a safe way
-unsafe impl Send for Timeout {}
+type Task = Box<dyn FnOnce() + Send + 'static>;
 
 impl Timeout {
     pub const STATE_INIT: u8 = 0;
     pub const STATE_CANCELLED: u8 = 1;
     pub const STATE_EXPIRED: u8 = 2;
 
-    pub fn new(task: Box<dyn FnOnce()>, deadline: u128) -> Timeout {
+    pub fn new(task: Task, deadline: u128) -> Timeout {
         Timeout {
             task,
             deadline,
@@ -370,8 +390,6 @@ impl Timeout {
 
 #[cfg(test)]
 mod tests {
-    use std::time::SystemTime;
-
     use super::*;
     #[test]
     fn test_bucket() {
@@ -392,34 +410,29 @@ mod tests {
 
     #[test]
     fn test_timer() {
-        let (tx, rx) = mpsc::channel();
-        let epoch = Instant::now();
+        let timer = HashedTimingWheel::with_default();
 
-        thread::scope(|scoped| {
-            scoped.spawn(move || {
-                let mut timer = HashedTimingWheel::new(Duration::from_millis(100), 512, epoch, rx);
-                let handle = timer.handle();
-                scoped.spawn(move || {
-                    thread::sleep(Duration::from_secs(6));
-                    handle.stop();
-                });
-                timer.start();
-            });
-            scoped.spawn(move || {
-                for i in 0..5 {
-                    let timeout = Timeout::new(
-                        Box::new(move || {
-                            println!(
-                                "task expired, current instant: {}, now: {:?}",
-                                epoch.elapsed().as_nanos(),
-                                SystemTime::now(),
-                            );
-                        }),
-                        Duration::from_secs(i).as_nanos(),
-                    );
-                    tx.send(timeout).unwrap();
-                }
-            });
-        });
+        for i in 0..5 {
+            let start_instant = Instant::now();
+            let delay = Duration::from_millis((i + 1) * 670);
+            timer
+                .new_timeout(
+                    move || {
+                        let now = Instant::now();
+                        println!(
+                            "task expired, start instant: {:?}, delay: {:?}, now: {:?}, diff: {:?}",
+                            start_instant,
+                            delay,
+                            now,
+                            now.duration_since(start_instant + delay), // timer start delay only affect task within delay
+                        );
+                    },
+                    delay,
+                )
+                .unwrap();
+        }
+
+        thread::sleep(Duration::from_secs(5));
+        timer.stop_timer();
     }
 }
