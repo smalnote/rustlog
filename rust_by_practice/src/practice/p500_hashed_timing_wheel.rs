@@ -37,6 +37,7 @@ pub struct Emitter {
 }
 
 impl Emitter {
+    // TODO: enable stop timeout manually
     pub fn new_timeout<F>(&self, f: F, delay: Duration) -> Result<(), mpsc::SendError<Timeout>>
     where
         F: FnOnce(),
