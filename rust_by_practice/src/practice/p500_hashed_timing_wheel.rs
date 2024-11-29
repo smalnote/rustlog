@@ -6,7 +6,7 @@ use std::{
         atomic::{AtomicU8, Ordering},
         mpsc,
     },
-    thread,
+    thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
 
@@ -25,25 +25,18 @@ pub struct HashedTimingWheel {
     /// System clock, as the time origin or epoch of timer start
     epoch: Instant,
 
-    pub(crate) worker_state: Arc<AtomicU8>,
+    worker_state: Arc<AtomicU8>,
 
     incoming_queue: mpsc::Receiver<Timeout>,
-    unprocessed_timeouts: Vec<Timeout>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Timer {
+pub struct Emitter {
     epoch: Instant,
     task_sender: mpsc::Sender<Timeout>,
-    timer_worker_state: Arc<AtomicU8>,
 }
 
-impl Timer {
-    pub fn stop_timer(&self) {
-        self.timer_worker_state
-            .store(HashedTimingWheel::WORKER_STATE_SHUTDOWN, Ordering::Relaxed);
-    }
-
+impl Emitter {
     pub fn new_timeout<F>(&self, f: F, delay: Duration) -> Result<(), mpsc::SendError<Timeout>>
     where
         F: FnOnce(),
@@ -57,24 +50,59 @@ impl Timer {
     }
 }
 
+pub struct Stopper {
+    timer_worker_state: Arc<AtomicU8>,
+    handle: JoinHandle<Vec<Task>>,
+}
+
+impl Stopper {
+    pub fn stop_timer(self) -> Result<Vec<Task>, String> {
+        if self
+            .timer_worker_state
+            .compare_exchange(
+                HashedTimingWheel::WORKER_STATE_STARTED,
+                HashedTimingWheel::WORKER_STATE_SHUTDOWN,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            )
+            .is_err()
+        {
+            // In this case, worker state can be INIT or SHUTDOWN, let it always be SHUTDOWN
+            self.timer_worker_state
+                .swap(HashedTimingWheel::WORKER_STATE_SHUTDOWN, Ordering::Relaxed);
+        }
+
+        self.handle
+            .join()
+            .map_err(|_| "timer thread panics".to_owned())
+    }
+}
+
 impl HashedTimingWheel {
     const WORKER_STATE_INIT: u8 = 0;
     const WORKER_STATE_STARTED: u8 = 1;
     const WORKER_STATE_SHUTDOWN: u8 = 2;
 
-    pub fn with_default() -> Timer {
+    pub fn with_default() -> (Emitter, Stopper) {
+        Self::with_tick(Duration::from_millis(100), 512)
+    }
+
+    pub fn with_tick(tick_duration: Duration, ticks_per_wheel: usize) -> (Emitter, Stopper) {
         let epoch = Instant::now();
         let (tx, rx) = mpsc::channel();
-        let mut timing_wheel = HashedTimingWheel::new(Duration::from_millis(100), 512, epoch, rx);
-        let timer = Timer {
+        let mut timing_wheel = HashedTimingWheel::new(tick_duration, ticks_per_wheel, epoch, rx);
+        let emitter = Emitter {
             epoch,
             task_sender: tx,
-            timer_worker_state: timing_wheel.worker_state.clone(),
         };
-        thread::spawn(move || {
-            timing_wheel.start();
-        });
-        timer
+        let timer_worker_state = timing_wheel.worker_state.clone();
+        let handle = thread::spawn(move || timing_wheel.start());
+
+        let stopper = Stopper {
+            timer_worker_state,
+            handle,
+        };
+        (emitter, stopper)
     }
 
     fn new(
@@ -84,8 +112,8 @@ impl HashedTimingWheel {
         incoming_queue: mpsc::Receiver<Timeout>,
     ) -> HashedTimingWheel {
         assert!(
-            ticks_per_wheel >= 64,
-            "ticks per wheel must not less than 64"
+            ticks_per_wheel >= 32,
+            "ticks per wheel must not less than 32"
         );
         assert!(
             tick_duration.as_millis() >= 10,
@@ -101,7 +129,6 @@ impl HashedTimingWheel {
             mask,
             epoch,
             incoming_queue,
-            unprocessed_timeouts: Vec::new(),
         }
     }
 
@@ -117,7 +144,7 @@ impl HashedTimingWheel {
         (wheel, n - 1)
     }
 
-    pub fn start(&mut self) {
+    pub fn start(&mut self) -> Vec<Task> {
         match self.worker_state.load(Ordering::Relaxed) {
             Self::WORKER_STATE_INIT => {
                 if self
@@ -145,7 +172,7 @@ impl HashedTimingWheel {
             Self::WORKER_STATE_SHUTDOWN => panic!("cannot be started once stopped"),
             _ => panic!("invalid worker state"),
         }
-        self.collect_unprocessed_timeouts();
+        self.collect_unprocessed_timeouts()
     }
 
     fn wait_for_next_tick(&self) -> u128 {
@@ -189,23 +216,21 @@ impl HashedTimingWheel {
                 (expired_tick - self.current_tick) / self.wheel.len()
             };
             let bucket_index = expired_tick & self.mask;
-            println!(
-                "bucket_index: {}, timeout rounds: {}, timeout deadline: {}",
-                bucket_index, timeout.rounds, timeout.deadline
-            );
             self.wheel[bucket_index].push(timeout);
         }
     }
 
-    fn collect_unprocessed_timeouts(&mut self) {
+    fn collect_unprocessed_timeouts(&mut self) -> Vec<Task> {
+        let mut unprocessed = Vec::new();
         for bucket in self.wheel.iter_mut() {
             for timeout in bucket.drain() {
-                self.unprocessed_timeouts.push(timeout);
+                unprocessed.push(timeout.task);
             }
         }
         while let Ok(timeout) = self.incoming_queue.try_recv() {
-            self.unprocessed_timeouts.push(timeout);
+            unprocessed.push(timeout.task);
         }
+        unprocessed
     }
 }
 
@@ -285,6 +310,7 @@ impl Bucket {
                 let node = self.remove(node_ptr);
                 let timeout = node.timeout;
                 if timeout.deadline <= deadline {
+                    // TODO: execute task in separate thread pool
                     (timeout.task)();
                 } else {
                     panic!("timeout.deadline > deadline");
@@ -410,20 +436,19 @@ mod tests {
 
     #[test]
     fn test_timer() {
-        let timer = HashedTimingWheel::with_default();
+        let (timer, stopper) = HashedTimingWheel::with_tick(Duration::from_millis(10), 32);
 
         for i in 0..5 {
             let start_instant = Instant::now();
-            let delay = Duration::from_millis((i + 1) * 670);
+            let delay = Duration::from_millis((i + 1) * 13);
             timer
                 .new_timeout(
                     move || {
                         let now = Instant::now();
                         println!(
-                            "task expired, start instant: {:?}, delay: {:?}, now: {:?}, diff: {:?}",
-                            start_instant,
+                            "task expired, expected delay: {:?}, actual delay: {:?} diff: {:?}",
                             delay,
-                            now,
+                            now.duration_since(start_instant),
                             now.duration_since(start_instant + delay), // timer start delay only affect task within delay
                         );
                     },
@@ -431,8 +456,59 @@ mod tests {
                 )
                 .unwrap();
         }
+        thread::sleep(Duration::from_millis(100));
 
-        thread::sleep(Duration::from_secs(5));
-        timer.stop_timer();
+        let unprocessed = stopper.stop_timer();
+        dbg!(unprocessed.unwrap().len());
+    }
+
+    #[test]
+    fn test_multi_emitter() {
+        let (emitter, stopper) = HashedTimingWheel::with_tick(Duration::from_millis(10), 32);
+        let second_emitter = emitter.clone();
+
+        thread::scope(|scoped| {
+            let spawn_start = Instant::now();
+            scoped.spawn(move || {
+                emitter
+                    .new_timeout(
+                        move || {
+                            println!(
+                                "first emitter, actual delay {:?}",
+                                Instant::now().duration_since(spawn_start)
+                            );
+                        },
+                        Duration::from_millis(30),
+                    )
+                    .unwrap();
+            });
+            scoped.spawn(move || {
+                second_emitter
+                    .new_timeout(
+                        move || {
+                            println!(
+                                "second emitter, actual delay {:?}",
+                                Instant::now().duration_since(spawn_start)
+                            );
+                        },
+                        Duration::from_millis(820),
+                    )
+                    .unwrap();
+                second_emitter
+                    .new_timeout(
+                        move || {
+                            println!(
+                                "second emitter, actual delay {:?}",
+                                Instant::now().duration_since(spawn_start)
+                            );
+                        },
+                        Duration::from_millis(3200),
+                    )
+                    .unwrap();
+            });
+        });
+
+        thread::sleep(Duration::from_millis(3500));
+        dbg!(stopper.stop_timer().unwrap().len());
     }
 }
