@@ -23,7 +23,6 @@ pub struct HashedTimingWheel {
     /// so bucket_index = expired_tick % 2^n = expired_tick & mask
     mask: usize,
 
-    // TODO: add constraint for max pending timeouts
     /// System clock, as the time origin or epoch of timer start
     epoch: Instant,
 
@@ -45,8 +44,11 @@ pub struct Emitter {
 }
 
 impl Emitter {
-    // TODO: enable stop timeout manually
-    pub fn new_timeout<F>(&self, f: F, delay: Duration) -> Result<(), mpsc::SendError<Timeout>>
+    pub fn new_timeout<F>(
+        &self,
+        f: F,
+        delay: Duration,
+    ) -> Result<Canceller, mpsc::SendError<Timeout>>
     where
         F: Future<Output = ()>,
         F: Send + 'static,
@@ -55,7 +57,34 @@ impl Emitter {
             .duration_since(self.epoch)
             .as_nanos();
         let timeout = Timeout::new(Box::pin(f), deadline);
-        self.task_sender.send(timeout)
+        let canceller = Canceller {
+            timeout_state: timeout.state.clone(),
+        };
+        self.task_sender.send(timeout).map(|_| canceller)
+    }
+}
+
+/// A handle for cancelling emitted timeout, succeed if timeout is pending,
+/// otherwise return a error.
+pub struct Canceller {
+    timeout_state: Arc<AtomicU8>,
+}
+
+impl Canceller {
+    pub fn cancel(&self) -> Result<(), &'static str> {
+        match self.timeout_state.compare_exchange(
+            Timeout::STATE_INIT,
+            Timeout::STATE_CANCELLED,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
+            Ok(_) => Ok(()),
+            Err(actual) => match actual {
+                Timeout::STATE_CANCELLED => Err("timeout already cancelled"),
+                Timeout::STATE_EXPIRED => Err("timeout already expired"),
+                _ => panic!("invalid timeout state"),
+            },
+        }
     }
 }
 
@@ -65,7 +94,7 @@ pub struct Stopper {
 }
 
 impl Stopper {
-    pub fn stop_timer(self) -> Result<Vec<Task>, String> {
+    pub fn stop_timer(self) -> Result<Vec<Task>, &'static str> {
         if self
             .timer_worker_state
             .compare_exchange(
@@ -81,9 +110,7 @@ impl Stopper {
                 .swap(HashedTimingWheel::WORKER_STATE_SHUTDOWN, Ordering::Relaxed);
         }
 
-        self.handle
-            .join()
-            .map_err(|_| "timer thread panics".to_owned())
+        self.handle.join().map_err(|_| "timer thread panics")
     }
 }
 
@@ -252,7 +279,6 @@ impl HashedTimingWheel {
 }
 
 /// Bucket is a doubly linked list of timeout task for a tick.
-/// TODO: check drop and drain
 struct Bucket {
     head: Option<NonNull<BucketNode>>,
     tail: Option<NonNull<BucketNode>>,
@@ -387,6 +413,9 @@ impl Iterator for Expired<'_> {
             if node.timeout.rounds == 0 {
                 let node = self.bucket.remove(node_ptr);
                 let timeout = node.timeout;
+                if !timeout.expire() {
+                    continue;
+                }
                 if timeout.deadline <= self.deadline {
                     return Some(timeout);
                 } else {
@@ -413,7 +442,7 @@ pub struct Timeout {
     /// Nano seconds offset beyond the timing wheel start time.
     deadline: u128,
     /// Thread safe state.
-    state: AtomicU8,
+    pub(super) state: Arc<AtomicU8>,
     /// The wheel level of task, when equal to zero, task is expiring, should be
     /// executed.
     rounds: usize,
@@ -428,9 +457,20 @@ impl Timeout {
         Timeout {
             task,
             deadline,
-            state: AtomicU8::new(Self::STATE_INIT),
+            state: Arc::new(AtomicU8::new(Self::STATE_INIT)),
             rounds: 0,
         }
+    }
+
+    pub fn expire(&self) -> bool {
+        self.state
+            .compare_exchange(
+                Self::STATE_INIT,
+                Self::STATE_EXPIRED,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            )
+            .is_ok()
     }
 
     pub fn cancel(&self) -> bool {
@@ -566,5 +606,37 @@ mod tests {
 
         thread::sleep(Duration::from_millis(3500));
         dbg!(stopper.stop_timer().unwrap().len());
+    }
+
+    #[test]
+    fn test_cancel_timeout() {
+        let (emitter, stopper) = HashedTimingWheel::with_default();
+
+        let c1 = emitter
+            .new_timeout(
+                async {
+                    println!("task 1");
+                },
+                Duration::from_millis(42),
+            )
+            .unwrap();
+        let c2 = emitter
+            .new_timeout(
+                async {
+                    println!("task 2");
+                },
+                Duration::from_millis(242),
+            )
+            .unwrap();
+
+        thread::sleep(Duration::from_millis(150));
+        assert!(c1.cancel().is_err());
+
+        assert!(c2.cancel().is_ok());
+        assert!(c2.cancel().is_err());
+        thread::sleep(Duration::from_millis(150));
+
+        let unprocessed = stopper.stop_timer().unwrap();
+        assert_eq!(unprocessed.len(), 0);
     }
 }
