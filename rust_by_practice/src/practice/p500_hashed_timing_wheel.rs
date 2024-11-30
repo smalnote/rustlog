@@ -1,5 +1,6 @@
 use std::{
     marker::PhantomData,
+    pin::Pin,
     ptr::NonNull,
     sync::{
         Arc,
@@ -9,6 +10,7 @@ use std::{
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
+use tokio::runtime::Runtime;
 
 pub struct HashedTimingWheel {
     /// Tick count from timer start, time elapsed since timer start is
@@ -28,7 +30,13 @@ pub struct HashedTimingWheel {
     worker_state: Arc<AtomicU8>,
 
     incoming_queue: mpsc::Receiver<Timeout>,
+
+    /// Executor for executing timeout task without blocking the scheduling
+    /// thread.
+    executor: Runtime,
 }
+
+pub type Task = Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
 
 #[derive(Debug, Clone)]
 pub struct Emitter {
@@ -40,13 +48,13 @@ impl Emitter {
     // TODO: enable stop timeout manually
     pub fn new_timeout<F>(&self, f: F, delay: Duration) -> Result<(), mpsc::SendError<Timeout>>
     where
-        F: FnOnce(),
+        F: Future<Output = ()>,
         F: Send + 'static,
     {
         let deadline = (Instant::now() + delay)
             .duration_since(self.epoch)
             .as_nanos();
-        let timeout = Timeout::new(Box::new(f), deadline);
+        let timeout = Timeout::new(Box::pin(f), deadline);
         self.task_sender.send(timeout)
     }
 }
@@ -121,6 +129,11 @@ impl HashedTimingWheel {
             "tick duration must not less than 10ms"
         );
         let (wheel, mask) = Self::create_wheel(ticks_per_wheel);
+        let executor = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(4)
+            .enable_all()
+            .build()
+            .unwrap();
 
         Self {
             current_tick: 0,
@@ -130,6 +143,7 @@ impl HashedTimingWheel {
             mask,
             epoch,
             incoming_queue,
+            executor,
         }
     }
 
@@ -161,8 +175,10 @@ impl HashedTimingWheel {
                     loop {
                         let deadline = self.wait_for_next_tick();
                         self.transfer_timeouts_to_bucket();
-                        let current_bucket = self.do_tick();
-                        current_bucket.expire_timeouts(deadline);
+                        let expired = self.do_tick().expired(deadline).collect::<Vec<_>>();
+                        for timeout in expired {
+                            self.executor.spawn(timeout.task);
+                        }
                         if self.worker_state.load(Ordering::Relaxed) != Self::WORKER_STATE_STARTED {
                             break;
                         }
@@ -301,39 +317,18 @@ impl Bucket {
             node
         }
     }
-
-    fn expire_timeouts(&mut self, deadline: u128) {
-        let mut cursor = self.head;
-        while let Some(node_ptr) = cursor {
-            let node = unsafe { &mut *node_ptr.as_ptr() };
-            let next = node.next;
-            if node.timeout.rounds == 0 {
-                let node = self.remove(node_ptr);
-                let timeout = node.timeout;
-                if timeout.deadline <= deadline {
-                    // TODO: execute task in separate thread pool
-                    (timeout.task)();
-                } else {
-                    panic!("timeout.deadline > deadline");
-                }
-            } else if node.timeout.is_cancelled() {
-                self.remove(node_ptr);
-            } else {
-                node.timeout.rounds -= 1;
-            }
-            cursor = next;
-        }
-    }
 }
 
 impl Drop for Bucket {
     fn drop(&mut self) {
-        let mut cursor = self.head;
-        while let Some(node) = cursor {
-            let node = unsafe { Box::from_raw(node.as_ptr()) };
-            cursor = node.next;
-        }
+        for _ in self.drain() {}
     }
+}
+
+struct Expired<'a> {
+    cursor: Option<NonNull<BucketNode>>,
+    bucket: &'a mut Bucket,
+    deadline: u128,
 }
 
 struct Drain<'a> {
@@ -342,6 +337,14 @@ struct Drain<'a> {
 }
 
 impl Bucket {
+    fn expired(&mut self, deadline: u128) -> Expired {
+        Expired {
+            cursor: self.head,
+            bucket: self,
+            deadline,
+        }
+    }
+
     fn drain(&mut self) -> Drain {
         Drain {
             cursor: self.head,
@@ -353,6 +356,8 @@ impl Bucket {
 impl Iterator for Drain<'_> {
     type Item = Timeout;
     fn next(&mut self) -> Option<Self::Item> {
+        // Eventually all element will be removed, simply take them out,
+        // and clean head and tail in Drop trait.
         match self.cursor {
             None => None,
             Some(node_ptr) => {
@@ -372,8 +377,39 @@ impl Drop for Drain<'_> {
     }
 }
 
+impl Iterator for Expired<'_> {
+    type Item = Timeout;
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(node_ptr) = self.cursor {
+            let node = unsafe { &mut *node_ptr.as_ptr() };
+            let next: Option<NonNull<BucketNode>> = node.next;
+            self.cursor = next;
+            if node.timeout.rounds == 0 {
+                let node = self.bucket.remove(node_ptr);
+                let timeout = node.timeout;
+                if timeout.deadline <= self.deadline {
+                    return Some(timeout);
+                } else {
+                    panic!("timeout.deadline > deadline");
+                }
+            } else if node.timeout.is_cancelled() {
+                self.bucket.remove(node_ptr);
+            } else {
+                node.timeout.rounds -= 1;
+            }
+        }
+        None
+    }
+}
+
+impl Drop for Expired<'_> {
+    fn drop(&mut self) {
+        for _ in &mut *self {}
+    }
+}
+
 pub struct Timeout {
-    task: Box<dyn FnOnce() + Send + 'static>,
+    task: Task,
     /// Nano seconds offset beyond the timing wheel start time.
     deadline: u128,
     /// Thread safe state.
@@ -382,8 +418,6 @@ pub struct Timeout {
     /// executed.
     rounds: usize,
 }
-
-type Task = Box<dyn FnOnce() + Send + 'static>;
 
 impl Timeout {
     pub const STATE_INIT: u8 = 0;
@@ -418,12 +452,31 @@ impl Timeout {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_spawn_dyn_future() {
+        let mut tasks: Vec<Pin<Box<dyn Future<Output = ()> + Send + 'static>>> = Vec::new();
+        tasks.push(Box::pin(async {
+            println!("hello");
+        }));
+        tasks.push(Box::pin(async {
+            println!("hi");
+        }));
+        let executor = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        for task in tasks {
+            executor.spawn(task);
+        }
+    }
+
     #[test]
     fn test_bucket() {
         let mut bucket = Bucket::new();
 
         for _ in 0..5 {
-            let timeout = Timeout::new(Box::new(|| {}), 0);
+            let timeout = Timeout::new(Box::pin(async {}), 0);
             dbg!(&timeout as *const _);
             bucket.push(timeout);
         }
@@ -432,7 +485,9 @@ mod tests {
             dbg!(&timeout as *const _);
         }
 
-        bucket.push(Timeout::new(Box::new(|| {}), 0));
+        bucket.push(Timeout::new(Box::pin(async {}), 0));
+
+        for _ in bucket.expired(0) {}
     }
 
     #[test]
@@ -441,10 +496,10 @@ mod tests {
 
         for i in 0..5 {
             let start_instant = Instant::now();
-            let delay = Duration::from_millis((i + 1) * 13);
+            let delay = Duration::from_millis((i + 1) * 10 - 1);
             timer
                 .new_timeout(
-                    move || {
+                    async move {
                         let now = Instant::now();
                         println!(
                             "task expired, expected delay: {:?}, actual delay: {:?} diff: {:?}",
@@ -473,7 +528,7 @@ mod tests {
             scoped.spawn(move || {
                 emitter
                     .new_timeout(
-                        move || {
+                        async move {
                             println!(
                                 "first emitter, actual delay {:?}",
                                 Instant::now().duration_since(spawn_start)
@@ -486,7 +541,7 @@ mod tests {
             scoped.spawn(move || {
                 second_emitter
                     .new_timeout(
-                        move || {
+                        async move {
                             println!(
                                 "second emitter, actual delay {:?}",
                                 Instant::now().duration_since(spawn_start)
@@ -497,7 +552,7 @@ mod tests {
                     .unwrap();
                 second_emitter
                     .new_timeout(
-                        move || {
+                        async move {
                             println!(
                                 "second emitter, actual delay {:?}",
                                 Instant::now().duration_since(spawn_start)
