@@ -12,7 +12,18 @@ use std::{
 };
 use tokio::runtime::Runtime;
 
-pub struct HashedTimingWheel {
+/// HashedWheelTimer implements a timer with single level timing wheel.
+/// Timeout tasks can be submitted into a [`mpsc::channel`] from multiple thread.
+/// The timer launch a separate thread polls tasks from the channel and put them
+/// into the wheel every tick. The default tick interval is 100ms, and wheel size
+/// is 512. Within the wheel, there are bucket for every tick, every bucket is a
+/// doubly linked list, timeout tasks polled from channel are appended at the end
+/// of bucket with a round. When timer tick a bucket, it decrease the round of all
+/// timeout task in it, if round is zero, means reaching task timeout deadline,
+/// execute them in a separate thread pool.
+///
+/// Inspired by: [**Netty HashedWheelTimer**](https://sourcegraph.com/github.com/netty/netty/-/blob/common/src/main/java/io/netty/util/HashedWheelTimer.java)
+pub struct HashedWheelTimer {
     /// Tick count from timer start, time elapsed since timer start is
     /// current_tick * tick_duration
     current_tick: usize,
@@ -35,8 +46,12 @@ pub struct HashedTimingWheel {
     executor: Runtime,
 }
 
-pub type Task = Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
+type Task = Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
 
+/// Emitter is a thread safe handler for submitting timeout task, if succeed,
+/// the emitter return a canceller for cancelling timeout task before the task
+/// expiring. This type implements Clone trait, user can have multiple instance,
+/// submit tasks from different threads.
 #[derive(Debug, Clone)]
 pub struct Emitter {
     epoch: Instant,
@@ -44,11 +59,10 @@ pub struct Emitter {
 }
 
 impl Emitter {
-    pub fn new_timeout<F>(
-        &self,
-        f: F,
-        delay: Duration,
-    ) -> Result<Canceller, mpsc::SendError<Timeout>>
+    /// Submit a timeout task with delay. Tasks are enqueued into a mpsc channel,
+    /// if failed, returns a SendError, otherwise a canceller for cancelling
+    /// task.
+    pub fn new_timeout<F>(&self, f: F, delay: Duration) -> Result<Canceller, &'static str>
     where
         F: Future<Output = ()>,
         F: Send + 'static,
@@ -60,7 +74,10 @@ impl Emitter {
         let canceller = Canceller {
             timeout_state: timeout.state.clone(),
         };
-        self.task_sender.send(timeout).map(|_| canceller)
+        self.task_sender
+            .send(timeout)
+            .map(|_| canceller)
+            .map_err(|_| "timer is already stopped")
     }
 }
 
@@ -71,6 +88,8 @@ pub struct Canceller {
 }
 
 impl Canceller {
+    /// Cancel timeout before expiring, if the timeout already cancelled or
+    /// expired, returns a error.
     pub fn cancel(&self) -> Result<(), &'static str> {
         match self.timeout_state.compare_exchange(
             Timeout::STATE_INIT,
@@ -88,18 +107,20 @@ impl Canceller {
     }
 }
 
+/// Handler for stopping timer and drain all timeout tasks.
 pub struct Stopper {
     timer_worker_state: Arc<AtomicU8>,
     handle: JoinHandle<Vec<Task>>,
 }
 
 impl Stopper {
+    /// Stop the timer and drain out all remaining tasks.
     pub fn stop_timer(self) -> Result<Vec<Task>, &'static str> {
         if self
             .timer_worker_state
             .compare_exchange(
-                HashedTimingWheel::WORKER_STATE_STARTED,
-                HashedTimingWheel::WORKER_STATE_SHUTDOWN,
+                HashedWheelTimer::WORKER_STATE_STARTED,
+                HashedWheelTimer::WORKER_STATE_SHUTDOWN,
                 Ordering::Relaxed,
                 Ordering::Relaxed,
             )
@@ -107,26 +128,31 @@ impl Stopper {
         {
             // In this case, worker state can be INIT or SHUTDOWN, let it always be SHUTDOWN
             self.timer_worker_state
-                .swap(HashedTimingWheel::WORKER_STATE_SHUTDOWN, Ordering::Relaxed);
+                .swap(HashedWheelTimer::WORKER_STATE_SHUTDOWN, Ordering::Relaxed);
         }
 
         self.handle.join().map_err(|_| "timer thread panics")
     }
 }
 
-impl HashedTimingWheel {
+impl HashedWheelTimer {
     const WORKER_STATE_INIT: u8 = 0;
     const WORKER_STATE_STARTED: u8 = 1;
     const WORKER_STATE_SHUTDOWN: u8 = 2;
 
+    /// Creates a timer running in separate thread and return a [`Emitter`] and
+    /// a [`Stopper`].
     pub fn with_default() -> (Emitter, Stopper) {
         Self::with_tick(Duration::from_millis(100), 512)
     }
 
-    pub fn with_tick(tick_duration: Duration, ticks_per_wheel: usize) -> (Emitter, Stopper) {
+    /// Creates timer with tick duration and wheel size, tick duration affects
+    /// time resolution, wheel size is the number of [`Bucket`], more buckets
+    /// means less mean length of bucket.
+    pub fn with_tick(tick_duration: Duration, wheel_size: usize) -> (Emitter, Stopper) {
         let epoch = Instant::now();
         let (tx, rx) = mpsc::channel();
-        let mut timing_wheel = HashedTimingWheel::new(tick_duration, ticks_per_wheel, epoch, rx);
+        let mut timing_wheel = HashedWheelTimer::new(tick_duration, wheel_size, epoch, rx);
         let emitter = Emitter {
             epoch,
             task_sender: tx,
@@ -143,19 +169,16 @@ impl HashedTimingWheel {
 
     fn new(
         tick_duration: Duration,
-        ticks_per_wheel: usize,
+        wheel_size: usize,
         epoch: Instant,
         incoming_queue: mpsc::Receiver<Timeout>,
-    ) -> HashedTimingWheel {
-        assert!(
-            ticks_per_wheel >= 32,
-            "ticks per wheel must not less than 32"
-        );
+    ) -> HashedWheelTimer {
+        assert!(wheel_size >= 32, "wheel size must not less than 32");
         assert!(
             tick_duration.as_millis() >= 10,
             "tick duration must not less than 10ms"
         );
-        let (wheel, mask) = Self::create_wheel(ticks_per_wheel);
+        let (wheel, mask) = Self::create_wheel(wheel_size);
         let executor = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(4)
             .enable_all()
@@ -174,9 +197,9 @@ impl HashedTimingWheel {
         }
     }
 
-    fn create_wheel(ticks_per_wheel: usize) -> (Vec<Bucket>, usize) {
+    fn create_wheel(wheel_size: usize) -> (Vec<Bucket>, usize) {
         let mut n = 1_usize;
-        while n < ticks_per_wheel {
+        while n < wheel_size {
             n <<= 1;
         }
         let mut wheel = Vec::with_capacity(n);
@@ -186,7 +209,7 @@ impl HashedTimingWheel {
         (wheel, n - 1)
     }
 
-    pub fn start(&mut self) -> Vec<Task> {
+    fn start(&mut self) -> Vec<Task> {
         match self.worker_state.load(Ordering::Relaxed) {
             Self::WORKER_STATE_INIT => {
                 if self
@@ -437,23 +460,23 @@ impl Drop for Expired<'_> {
     }
 }
 
-pub struct Timeout {
+struct Timeout {
     task: Task,
     /// Nano seconds offset beyond the timing wheel start time.
     deadline: u128,
     /// Thread safe state.
-    pub(super) state: Arc<AtomicU8>,
+    state: Arc<AtomicU8>,
     /// The wheel level of task, when equal to zero, task is expiring, should be
     /// executed.
     rounds: usize,
 }
 
 impl Timeout {
-    pub const STATE_INIT: u8 = 0;
-    pub const STATE_CANCELLED: u8 = 1;
-    pub const STATE_EXPIRED: u8 = 2;
+    const STATE_INIT: u8 = 0;
+    const STATE_CANCELLED: u8 = 1;
+    const STATE_EXPIRED: u8 = 2;
 
-    pub fn new(task: Task, deadline: u128) -> Timeout {
+    fn new(task: Task, deadline: u128) -> Timeout {
         Timeout {
             task,
             deadline,
@@ -462,22 +485,11 @@ impl Timeout {
         }
     }
 
-    pub fn expire(&self) -> bool {
+    fn expire(&self) -> bool {
         self.state
             .compare_exchange(
                 Self::STATE_INIT,
                 Self::STATE_EXPIRED,
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-            )
-            .is_ok()
-    }
-
-    pub fn cancel(&self) -> bool {
-        self.state
-            .compare_exchange(
-                Self::STATE_INIT,
-                Self::STATE_CANCELLED,
                 Ordering::Relaxed,
                 Ordering::Relaxed,
             )
@@ -532,7 +544,7 @@ mod tests {
 
     #[test]
     fn test_timer() {
-        let (timer, stopper) = HashedTimingWheel::with_tick(Duration::from_millis(10), 32);
+        let (timer, stopper) = HashedWheelTimer::with_tick(Duration::from_millis(10), 32);
 
         for i in 0..5 {
             let start_instant = Instant::now();
@@ -560,7 +572,7 @@ mod tests {
 
     #[test]
     fn test_multi_emitter() {
-        let (emitter, stopper) = HashedTimingWheel::with_tick(Duration::from_millis(10), 32);
+        let (emitter, stopper) = HashedWheelTimer::with_tick(Duration::from_millis(10), 32);
         let second_emitter = emitter.clone();
 
         thread::scope(|scoped| {
@@ -587,7 +599,7 @@ mod tests {
                                 Instant::now().duration_since(spawn_start)
                             );
                         },
-                        Duration::from_millis(820),
+                        Duration::from_millis(660),
                     )
                     .unwrap();
                 second_emitter
@@ -598,19 +610,19 @@ mod tests {
                                 Instant::now().duration_since(spawn_start)
                             );
                         },
-                        Duration::from_millis(3200),
+                        Duration::from_millis(720),
                     )
                     .unwrap();
             });
         });
 
-        thread::sleep(Duration::from_millis(3500));
+        thread::sleep(Duration::from_millis(800));
         dbg!(stopper.stop_timer().unwrap().len());
     }
 
     #[test]
     fn test_cancel_timeout() {
-        let (emitter, stopper) = HashedTimingWheel::with_default();
+        let (emitter, stopper) = HashedWheelTimer::with_default();
 
         let c1 = emitter
             .new_timeout(
