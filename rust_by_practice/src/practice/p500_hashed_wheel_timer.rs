@@ -507,20 +507,26 @@ mod tests {
 
     #[test]
     fn test_spawn_dyn_future() {
-        let mut tasks: Vec<Pin<Box<dyn Future<Output = ()> + Send + 'static>>> = Vec::new();
-        tasks.push(Box::pin(async {
-            println!("hello");
-        }));
-        tasks.push(Box::pin(async {
-            println!("hi");
-        }));
-        let executor = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        for task in tasks {
-            executor.spawn(task);
-        }
+        type Task = Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
+
+        let (tx, rx) = mpsc::channel::<Task>();
+
+        thread::scope(|scoped| {
+            scoped.spawn(move || {
+                let executor = tokio::runtime::Builder::new_multi_thread().build().unwrap();
+                while let Ok(task) = rx.recv() {
+                    executor.spawn(task); // Task as a Future must implement Pin trait for polling.
+                }
+            });
+            scoped.spawn(move || {
+                for i in 0..5 {
+                    tx.send(Box::pin(async move {
+                        println!("task #{}", i);
+                    }))
+                    .unwrap();
+                }
+            });
+        });
     }
 
     #[test]
