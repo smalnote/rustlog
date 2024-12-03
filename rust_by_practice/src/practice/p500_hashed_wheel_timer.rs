@@ -514,8 +514,12 @@ mod tests {
         thread::scope(|scoped| {
             scoped.spawn(move || {
                 let executor = tokio::runtime::Builder::new_multi_thread().build().unwrap();
+                let mut handles = Vec::new();
                 while let Ok(task) = rx.recv() {
-                    executor.spawn(task); // Task as a Future must implement Pin trait for polling.
+                    handles.push(executor.spawn(task)); // Task as a Future must implement Pin trait for polling.
+                }
+                for handle in handles {
+                    let _ = executor.block_on(handle);
                 }
             });
             scoped.spawn(move || {
