@@ -156,6 +156,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8318a53db07bb3f8dca91a600466bdb3f2eaadeedfdbcf02e1accbad9271ba50"
 
 [[package]]
+name = "cargo_crate_mod"
+version = "0.1.0"
+
+[[package]]
 name = "cargo_feature"
 version = "0.1.0"
 dependencies = [

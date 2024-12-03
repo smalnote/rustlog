@@ -8,7 +8,7 @@ pub mod cleaning {
         println!("Function called: wash_dish()");
     }
 
-    pub fn sweap_floor() {
+    pub fn sweep_floor() {
         println!("Function called: add_to_waitlist()");
     }
 }

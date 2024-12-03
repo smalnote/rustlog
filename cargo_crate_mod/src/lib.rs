@@ -1,10 +1,13 @@
-//! # rustlog
+//! # cargo_crate_mod
 //!
-//! `rustlog` is a collection of code snippets for practicing Rust.
-//! file: src/lib.rs library crate of project rustlog
-//! file: src/restaurant.rs
+//! `cargo_crate_mod` is a collection of mod for practicing Rust crate/package/mod.
+//! file: src/lib.rs library crate of project cargo_crate_mod
+//! file: src/restaurant.rs default binary
+//! file: src/bin/restaurant.rs one of binary
 
-pub mod practice;
+// make module available in src/bin/*, src/main.rs
+pub mod arithmetic;
+pub mod restaurant;
 
 use std::{
     sync::{
@@ -14,8 +17,8 @@ use std::{
     thread,
 };
 
-// re-export function with a short namespace rustlog::add_one
-pub use self::practice::p320_documentation::add_one;
+// re-export function with a short namespace crate::add_one
+pub use crate::arithmetic::add_one;
 
 pub struct ThreadPool {
     sender: Option<Sender<Job>>,
@@ -103,7 +106,7 @@ mod tests {
         let y = super::add_one(x);
         assert_eq!(y, 42);
 
-        let z = super::practice::p320_documentation::add_one(y);
+        let z = crate::add_one(y);
         assert_eq!(z, 43);
     }
 }
