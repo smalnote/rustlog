@@ -21,3 +21,8 @@ panic = "abort"
 lto = "thin"
 
 [profile.dev]
+
+[profile.test]
+debug = true
+debug-assertions = true
+overflow-checks = true

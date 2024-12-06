@@ -49,3 +49,4 @@ pub mod p470_atomic;
 pub mod p480_condvar;
 pub mod p490_semaphore;
 pub mod p500_hashed_wheel_timer;
+pub mod p510_swiss_table;
