@@ -20,6 +20,9 @@ jobs:
           toolchain: nightly
           profile: minimal
           override: true
+        
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
 
       - name: Run tests
         run: cargo test --verbose
