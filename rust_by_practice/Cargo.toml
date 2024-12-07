@@ -41,3 +41,4 @@ tokio = { version = "^1.40", features = [
 axum = "^0.7"
 lazy_static = "^1.5"
 hashbrown = "^0.15"
+siphasher = "1.0"
