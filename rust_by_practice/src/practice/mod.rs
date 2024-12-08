@@ -51,3 +51,4 @@ pub mod p490_semaphore;
 pub mod p500_hashed_wheel_timer;
 #[cfg(all(target_feature = "sse2", target_arch = "x86_64",))]
 pub mod p510_swiss_table;
+pub mod p520_borrow;
