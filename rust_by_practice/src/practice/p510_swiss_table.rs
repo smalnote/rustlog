@@ -89,8 +89,7 @@ where
 
     fn hash<Q>(&self, key: &Q) -> (u64, Tag)
     where
-        Q: Hash + Eq,
-        K: Borrow<Q>,
+        Q: Hash + Equivalent<K> + ?Sized,
     {
         let h = self.hahser_builder.hash_one(key);
         // Lower 7-bit as H2
@@ -137,7 +136,7 @@ where
             let meta: Metadata = unsafe { self.metas.add(offset).into() };
             let group: Group<K, V> = unsafe { self.groups.add(offset).into() };
             for entry_index in meta.match_tag(&h2) {
-                if group[entry_index].0 == *key {
+                if group[entry_index].0.borrow().equivalent(key) {
                     return Ok(Bucket {
                         ptr: unsafe { self.groups.add(offset + entry_index) },
                     });
@@ -157,16 +156,15 @@ where
         }
     }
 
-    // TODO: K -> &Q, remove K:Copy
-    pub fn get(&self, key: &K) -> Option<&V>
+    pub fn get<Q>(&self, key: &Q) -> Option<&V>
     where
-        K: Copy,
+        Q: Hash + Equivalent<K> + ?Sized,
     {
-        if self.len == 0 {
+        if self.is_empty() {
             return None;
         }
         // TODO: use ProbSeq instead raw linear probing
-        let (h1, h2) = self.hash(key);
+        let (h1, h2) = self.hash::<Q>(key);
         let start_index = h1 & self.mask;
         let mut index = start_index;
         loop {
@@ -175,7 +173,7 @@ where
             let meta: Metadata = unsafe { self.metas.add(offset).into() };
             let group: Group<K, V> = unsafe { self.groups.add(offset).into() };
             for entry_index in meta.match_tag(&h2) {
-                if group[entry_index].0 == *key {
+                if key.equivalent(&group[entry_index].0) {
                     return unsafe {
                         let ptr = self.groups.add(offset + entry_index);
                         Some(&ptr.as_ref().1)
@@ -194,9 +192,9 @@ where
         }
     }
 
-    pub fn remove(&mut self, key: &K) -> Option<V>
+    pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
     where
-        K: Copy,
+        Q: Hash + Equivalent<K> + ?Sized,
     {
         if self.len == 0 {
             return None;
@@ -211,7 +209,7 @@ where
             let meta: Metadata = unsafe { self.metas.add(offset).into() };
             let group: Group<K, V> = unsafe { self.groups.add(offset).into() };
             for entry_index in meta.match_tag(&h2) {
-                if group[entry_index].0 == *key {
+                if key.equivalent(&group[entry_index].0) {
                     self.len -= 1;
                     let (_, value) = unsafe {
                         ptr::write(self.metas.add(offset + entry_index).as_ptr(), Tag::DELETED);
@@ -256,6 +254,32 @@ impl<K, V> Drop for SwissTable<K, V> {
             alloc::dealloc(self.metas.as_ptr() as *mut _, metas_layout);
             alloc::dealloc(self.groups.as_ptr() as *mut _, groups_layout);
         }
+    }
+}
+
+/// Key equivalence trait.
+///
+/// This trait allows hash table lookup to be customized. It has one blanket
+/// implementation that uses the regular solution with `Borrow` and `Eq`, just
+/// like `HashMap` does, so that you can pass `&str` to lookup into a map with
+/// `String` keys and so on.
+///
+/// # Contract
+///
+/// The implementor **must** hash like `K`, if it is hashable.
+pub trait Equivalent<K: ?Sized> {
+    /// Compare self to `key` and return `true` if they are equal.
+    fn equivalent(&self, key: &K) -> bool;
+}
+
+impl<Q: ?Sized, K: ?Sized> Equivalent<K> for Q
+where
+    Q: Eq,
+    K: Borrow<Q>,
+{
+    #[inline]
+    fn equivalent(&self, key: &K) -> bool {
+        PartialEq::eq(self, key.borrow())
     }
 }
 
@@ -437,7 +461,6 @@ impl<K, V> Deref for Group<K, V> {
 
 // x86_64 SIMD as example
 #[cfg(test)]
-#[cfg(target_arch = "x86_64")]
 mod tests {
     use super::*;
 
