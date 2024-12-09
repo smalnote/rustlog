@@ -10,14 +10,14 @@ use std::{
 };
 
 pub struct SwissTable<K, V> {
-    metas: NonNull<u8>,
+    words: NonNull<u8>,
     groups: NonNull<(K, V)>,
     /// Number of groups set to power of 2, mask set to n^2 - 1,
     /// index & mask is equivalent to index % n ^ 2
     mask: u64,
     cap: usize,
     len: usize,
-    hahser_builder: std::hash::RandomState,
+    hash_builder: std::hash::RandomState,
 }
 
 impl<K, V> Default for SwissTable<K, V>
@@ -43,22 +43,22 @@ where
         // Hence, one control byte for a entry, 16 elements per group.
         // For simplicity, we create a fixed capacity of table with
         // 8 (2^3) groups, 8 * 16 entry at most.
-        let metas = Self::alloc_metas(cap);
+        let words = Self::alloc_group_words(cap);
         let groups = Self::alloc_groups(cap);
         Self {
-            metas,
+            words,
             groups,
             mask: (NUMBER_GROUP - 1) as u64,
             cap,
             len: 0,
-            hahser_builder: Default::default(),
+            hash_builder: Default::default(),
         }
     }
 
     /// Creates control bytes for entries, one byte for an entry.
     /// All control byte are initially empty.
-    fn alloc_metas(cap: usize) -> NonNull<u8> {
-        // metadatas buffer is array of byte, one byte for a entry
+    fn alloc_group_words(cap: usize) -> NonNull<u8> {
+        // group words buffer is array of byte, one byte for a entry
         let layout = alloc::Layout::array::<u8>(cap).unwrap();
         unsafe {
             let ptr = alloc::alloc(layout);
@@ -89,7 +89,7 @@ where
     where
         Q: Hash + Equivalent<K> + ?Sized,
     {
-        let h = self.hahser_builder.hash_one(key);
+        let h = self.hash_builder.hash_one(key);
         // Lower 7-bit as H2
         let h2 = (h & 0x01_111_111) as u8;
         // Higher 57-bit as H1
@@ -111,7 +111,7 @@ where
             Err(slot) => {
                 unsafe {
                     self.len += 1;
-                    ptr::write(self.metas.add(slot.index).as_ptr(), h2.0);
+                    ptr::write(self.words.add(slot.index).as_ptr(), h2.0);
                     ptr::write(self.groups.add(slot.index).as_ptr(), (key, value));
                 }
                 None
@@ -132,9 +132,9 @@ where
         loop {
             let offset = probe_seq.group_index * GROUP_SIZE;
             // First: try find a entry for key
-            let meta: Metadata = unsafe { self.metas.add(offset).into() };
+            let word: GroupWord = unsafe { self.words.add(offset).into() };
             let group: Group<K, V> = unsafe { self.groups.add(offset).into() };
-            for entry_index in meta.match_tag(&h2) {
+            for entry_index in word.match_tag(&h2) {
                 if group[entry_index].0.borrow().equivalent(key) {
                     return Ok(Bucket {
                         ptr: unsafe { self.groups.add(offset + entry_index) },
@@ -142,8 +142,8 @@ where
                 }
             }
 
-            if let Some(available_slot) = meta.match_empty_or_deleted().lowest_set_bit() {
-                if meta.match_empty().any_bit_set() || not_found {
+            if let Some(available_slot) = word.match_empty_or_deleted().lowest_set_bit() {
+                if word.match_empty().any_bit_set() || not_found {
                     // If there is a empty slot, we stop probing, and use a empty or deleted slot.
                     // Or we have probed all group and not empty slot found, use the deleted slot.
                     return Err(InsertSlot {
@@ -173,9 +173,9 @@ where
         loop {
             let offset = probe_seq.group_index * GROUP_SIZE;
             // First: try find a entry for key
-            let meta: Metadata = unsafe { self.metas.add(offset).into() };
+            let word: GroupWord = unsafe { self.words.add(offset).into() };
             let group: Group<K, V> = unsafe { self.groups.add(offset).into() };
-            for entry_index in meta.match_tag(&h2) {
+            for entry_index in word.match_tag(&h2) {
                 if key.equivalent(&group[entry_index].0) {
                     return unsafe {
                         let ptr = self.groups.add(offset + entry_index);
@@ -184,7 +184,7 @@ where
                 }
             }
 
-            if meta.match_empty().any_bit_set() {
+            if word.match_empty().any_bit_set() {
                 return None;
             }
             probe_seq.move_next()?;
@@ -203,20 +203,20 @@ where
         loop {
             let offset = probe_seq.group_index * GROUP_SIZE;
             // First: try find a entry for key
-            let meta: Metadata = unsafe { self.metas.add(offset).into() };
+            let word: GroupWord = unsafe { self.words.add(offset).into() };
             let group: Group<K, V> = unsafe { self.groups.add(offset).into() };
-            for entry_index in meta.match_tag(&h2) {
+            for entry_index in word.match_tag(&h2) {
                 if key.equivalent(&group[entry_index].0) {
                     self.len -= 1;
                     let (_, value) = unsafe {
-                        ptr::write(self.metas.add(offset + entry_index).as_ptr(), Tag::DELETED);
+                        ptr::write(self.words.add(offset + entry_index).as_ptr(), Tag::DELETED);
                         ptr::read(self.groups.add(offset + entry_index).as_ptr())
                     };
                     return Some(value);
                 }
             }
 
-            if meta.match_empty().any_bit_set() {
+            if word.match_empty().any_bit_set() {
                 return None;
             }
             probe_seq.move_next()?;
@@ -231,9 +231,9 @@ impl<K, V> SwissTable<K, V> {
         Drain {
             index: 0,
             len,
-            meta: self.metas,
+            group_word: self.words,
             group: self.groups,
-            bitmask_iter: Metadata::from(self.metas).match_full().into_iter(),
+            bit_mask_iter: GroupWord::from(self.words).match_full().into_iter(),
         }
     }
 }
@@ -241,10 +241,10 @@ impl<K, V> SwissTable<K, V> {
 impl<K, V> Drop for SwissTable<K, V> {
     fn drop(&mut self) {
         for _ in self.drain() {}
-        let metas_layout = Layout::array::<u8>(NUMBER_GROUP * GROUP_SIZE).unwrap();
+        let words_layout = Layout::array::<u8>(NUMBER_GROUP * GROUP_SIZE).unwrap();
         let groups_layout = Layout::array::<(K, V)>(NUMBER_GROUP * GROUP_SIZE).unwrap();
         unsafe {
-            alloc::dealloc(self.metas.as_ptr() as *mut _, metas_layout);
+            alloc::dealloc(self.words.as_ptr() as *mut _, words_layout);
             alloc::dealloc(self.groups.as_ptr() as *mut _, groups_layout);
         }
     }
@@ -279,9 +279,9 @@ where
 struct Drain<T> {
     index: usize,
     len: usize,
-    meta: NonNull<u8>,
+    group_word: NonNull<u8>,
     group: NonNull<T>,
-    bitmask_iter: BitMaskIter,
+    bit_mask_iter: BitMaskIter,
 }
 
 impl<T> Iterator for Drain<T> {
@@ -290,19 +290,19 @@ impl<T> Iterator for Drain<T> {
     fn next(&mut self) -> Option<Self::Item> {
         if self.len == 0 {
             None
-        } else if let Some(slot_index) = self.bitmask_iter.next() {
+        } else if let Some(slot_index) = self.bit_mask_iter.next() {
             self.len -= 1;
 
-            //* Safe: we are iterating metadata linearly, and the table will be empty eventually
-            unsafe { ptr::write(self.meta.add(slot_index).as_ptr(), Tag::EMPTY) };
+            //* Safe: we are iterating group word linearly, and the table will be empty eventually
+            unsafe { ptr::write(self.group_word.add(slot_index).as_ptr(), Tag::EMPTY) };
 
             Some(unsafe { ptr::read(self.group.add(slot_index).as_ptr()) })
         } else if self.index < NUMBER_GROUP - 1 {
             self.index += 1;
             unsafe {
-                self.meta = self.meta.add(GROUP_SIZE);
+                self.group_word = self.group_word.add(GROUP_SIZE);
                 self.group = self.group.add(GROUP_SIZE);
-                self.bitmask_iter = Metadata::from(self.meta).match_full().into_iter();
+                self.bit_mask_iter = GroupWord::from(self.group_word).match_full().into_iter();
             }
             self.next()
         } else {
@@ -356,12 +356,12 @@ struct InsertSlot {
     index: usize,
 }
 
-/// Metadata is a 16-byte for a group a entry.
-struct Metadata {
+/// GroupWord is a 16-byte for a group a entry.
+struct GroupWord {
     m128i: x86::__m128i,
 }
 
-impl From<NonNull<u8>> for Metadata {
+impl From<NonNull<u8>> for GroupWord {
     fn from(value: NonNull<u8>) -> Self {
         Self {
             m128i: unsafe { x86::_mm_load_si128(value.as_ptr() as *const _) },
@@ -369,7 +369,7 @@ impl From<NonNull<u8>> for Metadata {
     }
 }
 
-impl Metadata {
+impl GroupWord {
     fn match_tag(&self, tag: &Tag) -> BitMask {
         unsafe {
             let cmp_ret = x86::_mm_cmpeq_epi8(self.m128i, x86::_mm_set1_epi8(tag.0 as i8));
@@ -443,7 +443,7 @@ impl Iterator for BitMaskIter {
     }
 }
 
-/// Tag is a metadata control byte for a slot in group.
+/// Tag is a GroupWord control byte for a slot in group.
 #[derive(Clone, Copy)]
 struct Tag(u8);
 
@@ -576,11 +576,11 @@ mod tests {
             let ptr = &tags[..];
             let ptr = ptr.as_ptr();
             // construct a control of 16 bytes from raw bytes
-            let meta = _mm_load_si128(ptr as *const _);
+            let group_word = _mm_load_si128(ptr as *const _);
             // SIMD instruction, match EMPTY or DELETED byte
             // since EMPTY or DELETE byte set highest bit to 1
             // use SIMD to collect bytes with highest bit set to 1
-            let mask = _mm_movemask_epi8(meta) as u16;
+            let mask = _mm_movemask_epi8(group_word) as u16;
             // bits with 1 are empty or delete
             assert_eq!(mask, 0b0011_1010_1010_1111);
         }
