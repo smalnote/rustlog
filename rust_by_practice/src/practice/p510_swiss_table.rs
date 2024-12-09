@@ -9,8 +9,6 @@ use std::{
     ptr::{self, NonNull},
 };
 
-use siphasher::sip::SipHasher13;
-
 pub struct SwissTable<K, V> {
     metas: NonNull<u8>,
     groups: NonNull<(K, V)>,
@@ -19,7 +17,7 @@ pub struct SwissTable<K, V> {
     mask: u64,
     cap: usize,
     len: usize,
-    hahser_builder: DefaultHashBuilder,
+    hahser_builder: std::hash::RandomState,
 }
 
 impl<K, V> Default for SwissTable<K, V>
@@ -87,7 +85,7 @@ where
         self.len == 0
     }
 
-    fn hash<Q>(&self, key: &Q) -> (u64, Tag)
+    fn hash<Q>(&self, key: &Q) -> (usize, Tag)
     where
         Q: Hash + Equivalent<K> + ?Sized,
     {
@@ -95,7 +93,7 @@ where
         // Lower 7-bit as H2
         let h2 = (h & 0x01_111_111) as u8;
         // Higher 57-bit as H1
-        let h1 = h >> 7;
+        let h1 = (h >> 7) as usize;
         (h1, Tag(h2))
     }
 
@@ -123,15 +121,16 @@ where
 
     fn find_entry_or_insert_slot(
         &mut self,
-        h1: u64,
+        h1: usize,
         h2: Tag,
         key: &K,
     ) -> Result<Bucket<(K, V)>, InsertSlot> {
-        // TODO: use ProbSeq instead raw linear probing
-        let start_index = h1 & self.mask;
-        let mut index = start_index;
+        // * Caller should ensure at least one available slot, or probing will
+        // be a infinite loop
+        let mut probe_seq = ProbeSeq::from(h1, self.mask as usize);
+        let mut not_found = false;
         loop {
-            let offset = index as usize * GROUP_SIZE;
+            let offset = probe_seq.group_index * GROUP_SIZE;
             // First: try find a entry for key
             let meta: Metadata = unsafe { self.metas.add(offset).into() };
             let group: Group<K, V> = unsafe { self.groups.add(offset).into() };
@@ -143,15 +142,21 @@ where
                 }
             }
 
-            if let Some(slot_index) = meta.match_empty_or_deleted().into_iter().next() {
-                return Err(InsertSlot {
-                    index: offset + slot_index,
-                });
+            if let Some(available_slot) = meta.match_empty_or_deleted().lowest_set_bit() {
+                if meta.match_empty().any_bit_set() || not_found {
+                    // If there is a empty slot, we stop probing, and use a empty or deleted slot.
+                    // Or we have probed all group and not empty slot found, use the deleted slot.
+                    return Err(InsertSlot {
+                        index: offset + available_slot,
+                    });
+                }
             }
-            index = (index + 1) & self.mask; // we simply do linear probing
-            if index == start_index {
-                // all group probed
-                panic!("too many entries");
+
+            // If group is all full or deleted, we should keep probing
+            if probe_seq.move_next().is_none() {
+                // All groups probed and no empty slot, restart probing a deleted slot
+                probe_seq = ProbeSeq::from(h1, self.mask as usize);
+                not_found = true;
             }
         }
     }
@@ -163,12 +168,10 @@ where
         if self.is_empty() {
             return None;
         }
-        // TODO: use ProbSeq instead raw linear probing
         let (h1, h2) = self.hash::<Q>(key);
-        let start_index = h1 & self.mask;
-        let mut index = start_index;
+        let mut probe_seq = ProbeSeq::from(h1, self.mask as usize);
         loop {
-            let offset = index as usize * GROUP_SIZE;
+            let offset = probe_seq.group_index * GROUP_SIZE;
             // First: try find a entry for key
             let meta: Metadata = unsafe { self.metas.add(offset).into() };
             let group: Group<K, V> = unsafe { self.groups.add(offset).into() };
@@ -184,11 +187,7 @@ where
             if meta.match_empty().any_bit_set() {
                 return None;
             }
-            index = (index + 1) & self.mask; // we simply do linear probing
-            if index == start_index {
-                // all group probed
-                return None;
-            }
+            probe_seq.move_next()?;
         }
     }
 
@@ -199,12 +198,10 @@ where
         if self.len == 0 {
             return None;
         }
-        // TODO: use ProbSeq instead raw linear probing
         let (h1, h2) = self.hash(key);
-        let start_index = h1 & self.mask;
-        let mut index = start_index;
+        let mut probe_seq = ProbeSeq::from(h1, self.mask as usize);
         loop {
-            let offset = index as usize * GROUP_SIZE;
+            let offset = probe_seq.group_index * GROUP_SIZE;
             // First: try find a entry for key
             let meta: Metadata = unsafe { self.metas.add(offset).into() };
             let group: Group<K, V> = unsafe { self.groups.add(offset).into() };
@@ -222,11 +219,7 @@ where
             if meta.match_empty().any_bit_set() {
                 return None;
             }
-            index = (index + 1) & self.mask; // we simply do linear probing
-            if index == start_index {
-                // all group probed
-                return None;
-            }
+            probe_seq.move_next()?;
         }
     }
 }
@@ -324,14 +317,32 @@ impl<T> Drop for Drain<T> {
     }
 }
 
-#[derive(Default)]
-struct DefaultHashBuilder {}
+struct ProbeSeq {
+    /// Current probing group index
+    group_index: usize,
+    /// Number of group -1 (2^n-1), for mod 2^n
+    mask: usize,
+    /// Start index for check overlapping
+    start_index: usize,
+}
 
-impl BuildHasher for DefaultHashBuilder {
-    type Hasher = SipHasher13;
-    fn build_hasher(&self) -> Self::Hasher {
-        // TODO: random state
-        SipHasher13::new()
+impl ProbeSeq {
+    fn from(h1: usize, mask: usize) -> ProbeSeq {
+        let start_index = h1 & mask;
+        Self {
+            group_index: start_index,
+            mask,
+            start_index,
+        }
+    }
+    fn move_next(&mut self) -> Option<usize> {
+        // Simply do linear probing
+        self.group_index = (self.group_index + 1) & self.mask;
+        if self.group_index == self.start_index {
+            None
+        } else {
+            Some(self.group_index)
+        }
     }
 }
 
@@ -578,7 +589,7 @@ mod tests {
     #[test]
     fn test_hash_brown_map() {
         // use hashbrown for debugging, since std lib jump into assembly code at some points
-        let mut m = hashbrown::HashMap::with_capacity(16);
+        let mut m: hashbrown::HashMap<i32, String> = hashbrown::HashMap::with_capacity(7);
 
         m.insert(10, "alpha".to_string());
         m.insert(20, "beta".to_string());
