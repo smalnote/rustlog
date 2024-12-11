@@ -3,6 +3,7 @@ use std::{
     arch::x86_64 as x86,
     borrow::Borrow,
     hash::{BuildHasher, Hash},
+    marker::PhantomData,
     mem,
     num::NonZeroU16,
     ops::Deref,
@@ -225,7 +226,7 @@ where
 }
 
 impl<K, V> SwissTable<K, V> {
-    fn drain(&mut self) -> Drain<(K, V)> {
+    fn drain(&mut self) -> Drain<'_, K, V> {
         let len = self.len;
         self.len = 0;
         Drain {
@@ -234,6 +235,7 @@ impl<K, V> SwissTable<K, V> {
             group_word: self.words,
             group: self.groups,
             bit_mask_iter: GroupWord::from(self.words).match_full().into_iter(),
+            _table: PhantomData,
         }
     }
 }
@@ -276,16 +278,20 @@ where
     }
 }
 
-struct Drain<T> {
+struct Drain<'a, K, V> {
     index: usize,
     len: usize,
     group_word: NonNull<u8>,
-    group: NonNull<T>,
+    group: NonNull<(K, V)>,
     bit_mask_iter: BitMaskIter,
+    // Logically Drain borrow a mutable table, without this marker, caller is
+    // able to mutate the table while draining, result in data race on group
+    // and group_word.
+    _table: PhantomData<&'a mut SwissTable<K, V>>,
 }
 
-impl<T> Iterator for Drain<T> {
-    type Item = T;
+impl<K, V> Iterator for Drain<'_, K, V> {
+    type Item = (K, V);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.len == 0 {
@@ -311,7 +317,7 @@ impl<T> Iterator for Drain<T> {
     }
 }
 
-impl<T> Drop for Drain<T> {
+impl<K, V> Drop for Drain<'_, K, V> {
     fn drop(&mut self) {
         for _ in &mut *self {}
     }
