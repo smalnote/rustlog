@@ -242,7 +242,7 @@ impl<K, V> SwissTable<K, V> {
 
 impl<K, V> Drop for SwissTable<K, V> {
     fn drop(&mut self) {
-        for _ in self.drain() {}
+        self.drain();
         let words_layout = Layout::array::<u8>(NUMBER_GROUP * GROUP_SIZE).unwrap();
         let groups_layout = Layout::array::<(K, V)>(NUMBER_GROUP * GROUP_SIZE).unwrap();
         unsafe {
