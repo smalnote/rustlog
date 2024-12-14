@@ -10,14 +10,16 @@
 -   File size: 1GB
 -   Unix Domain Socket Server: nc -lU /tmp/zero_copy.sock >/dev/null
 
-## Baseline: C Language
+## Benchmark
 
-| API         | Clocks | Seconds   | Diff  |
-| ----------- | ------ | --------- | ----- |
-| read/send   | 907329 | 907.329ms | 100%  |
-| mmap/send   | 265564 | 265.564ms | 29.3% |
-| sendfile    | 131007 | 131.007ms | 14.4% |
-| splice/pipe | 158149 | 158.149ms | 17.4% |
+| API                                 | Seconds | Diff  |
+| ----------------------------------- | ------- | ----- |
+| C read/send                         | 907ms   | 100%  |
+| C mmap/send                         | 266ms   | 29.3% |
+| C sendfile                          | 131ms   | 14.4% |
+| C splice/pipe                       | 158ms   | 17.4% |
+| Rust std::io::copy                  | 577ms   | 63.6% |
+| Rust nix::sys::sendfile::sendfile64 | 575ms   | 63.4% |
 
 > [!NOTE]
 > API splice/pipe use a pipe to connect filefd and sockfd, according to `man 2 spclie`,
@@ -63,8 +65,6 @@ fn copy_file_to_unix_domain_socket<'a>(file_path: &'a str, socket_path: &'a str)
     Ok(())
 }
 ```
-
-Time elapsed: **582ms**(release), 748ms(debug +28%)
 
 ### 分析：从 Disk File 到 Socket 的拷贝并没有走零拷贝 API
 
