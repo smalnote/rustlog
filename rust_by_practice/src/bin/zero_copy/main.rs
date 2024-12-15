@@ -1,7 +1,7 @@
 use std::{
     env,
     fs::File,
-    io::{self, Result},
+    io::{self, Read, Result, Write},
     os::unix::net::UnixStream,
     time::Instant,
 };
@@ -23,6 +23,7 @@ fn main() -> Result<()> {
     match method.as_str() {
         "std_io_copy" => copy_file_to_unix_domain_socket(file, socket)?,
         "nix_sendfile" => nix_sendfile(file, socket)?,
+        "read_write" => read_write(file, socket)?,
         _ => panic!("unsupported method {}", method),
     }
 
@@ -41,5 +42,17 @@ fn nix_sendfile(file: File, socket: UnixStream) -> Result<()> {
     let size = file.metadata().unwrap().len() as usize;
     let copied_len = nix::sys::sendfile::sendfile64(socket, file, None, size)?;
     debug_assert_eq!(copied_len, size);
+    Ok(())
+}
+
+fn read_write(file: File, socket: UnixStream) -> Result<()> {
+    let mut buf: [u8; 4096] = [0; 4096];
+    loop {
+        let bytes_read = (&file).read(&mut buf[..])?;
+        if bytes_read == 0 {
+            break;
+        }
+        (&socket).write_all(&buf[..bytes_read])?
+    }
     Ok(())
 }
