@@ -1214,6 +1214,7 @@ dependencies = [
  "hello_marco",
  "lazy_static",
  "length",
+ "libc",
  "nix",
  "rand",
  "siphasher",

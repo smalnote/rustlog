@@ -20,7 +20,13 @@
 | C splice/pipe                       | 158ms   | 17.4%  |
 | Rust std::io::copy                  | 577ms   | 63.6%  |
 | Rust nix::sys::sendfile::sendfile64 | 575ms   | 63.4%  |
+| Rust libc::sendfile64               | 545ms   | 60.1%  |
 | Rust read&write with buffer         | 915ms   | 100.1% |
+
+```bash
+# use netcat to listen unix domain socket and drop file to /dev/null
+nc -lU /tmp/zero_copy.sock >/dev/null && rm /tmp/zero_copy.sock
+```
 
 > [!NOTE]
 > API splice/pipe use a pipe to connect filefd and sockfd, according to `man 2 spclie`,
@@ -223,7 +229,7 @@ trait CopyWrite: Write {
 
 // 这样只需要对可以进行 zero copy 的 reader / writer 类型分别实现 CopyRead, CopyWrite trait
 // 则编译器生成 SpecCopy::copy() 调用的代码时，就会匹配到 zero-copy 优化的实现
-// std::sys::kernel_copy 模块中，对 fs::File, std::net::tcp::TcpStream， 
+// std::sys::kernel_copy 模块中，对 fs::File, std::net::tcp::TcpStream，
 // std::os::unix::net::stream::UnixStream 等标准库中的类型都实现了 CopyRead, CopyWrite trait
 // 如：
 impl CopyRead for UnixStream {
@@ -252,6 +258,6 @@ impl CopyWrite for &UnixStream {
 
 // 这样在 File, TcpStream, UnixStream, Pipe, Character Device 等文件描述符之间进行 copy 时
 // 就会使用第二个 SpecCopy::copy 实现，利用 Super Trait: CopyRead, CopyWrite 配合泛型参数进行
-// 编译时的静态分发，实现多态，高效而巧妙；扩展性方面，有新的 reader / writer 需要支持，只需要实现 
+// 编译时的静态分发，实现多态，高效而巧妙；扩展性方面，有新的 reader / writer 需要支持，只需要实现
 // CopyRead, CopyWrite 即可。
 ```
