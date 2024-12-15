@@ -1,11 +1,11 @@
 use std::{
+    future::Future,
     marker::PhantomData,
     pin::Pin,
     ptr::NonNull,
     sync::{
-        Arc,
         atomic::{AtomicU8, Ordering},
-        mpsc,
+        mpsc, Arc,
     },
     thread::{self, JoinHandle},
     time::{Duration, Instant},
