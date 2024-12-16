@@ -12,6 +12,13 @@
 
 ## Benchmark
 
+**Unix Domain Socket Server**
+
+```bash
+# Use netcat to listen unix domain socket and drop file to /dev/null
+nc -lU /tmp/zero_copy.sock >/dev/null && rm /tmp/zero_copy.sock
+```
+
 | API                                 | Seconds | Diff   |
 | ----------------------------------- | ------- | ------ |
 | C read/send                         | 907ms   | 100%   |
@@ -23,21 +30,14 @@
 | Rust libc::sendfile64               | 545ms   | 60.1%  |
 | Rust read&write with buffer         | 915ms   | 100.1% |
 
-```bash
-# use netcat to listen unix domain socket and drop file to /dev/null
-nc -lU /tmp/zero_copy.sock >/dev/null && rm /tmp/zero_copy.sock
-```
-
 > [!NOTE]
 > API splice/pipe use a pipe to connect filefd and sockfd, according to `man 2 spclie`,
 > the splice function requires one of file descriptor to be pipe, result in:
 > splice(filefd, pipefd[1]) and splice(pipefd[1], sockfd).
 
-## Rust Zero-Copy Source Code
+## Rust Zero-Copy [Source Code](<(https://github.com/rust-lang/rust/blob/8e37e151835d96d6a7415e93e6876561485a3354/library/std/src/sys/pal/unix/kernel_copy.rs)>)
 
-[Source Code](https://github.com/rust-lang/rust/blob/8e37e151835d96d6a7415e93e6876561485a3354/library/std/src/sys/pal/unix/kernel_copy.rs)
-
-## Copy Disk file to Unix Domain Socket
+### Copy Disk file to Unix Domain Socket
 
 ```rust
 use std::{
