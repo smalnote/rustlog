@@ -6,9 +6,16 @@
 -   Mem: 48GB
 -   OS: AlmaLinux 9
 -   Host: KVM
--   Scenario: Copy 1GB file from SSD to local Unix domain socket
--   File size: 1GB
--   Unix Domain Socket Server: nc -lU /tmp/zero_copy.sock >/dev/null
+
+## 总结
+
+零拷贝 API 对于**时间复杂度**的降低绝对值上并没有太大效果，原理上减少的时间消耗来自于减少在 
+Linux 用户态和内核态之间进行上下文切换的次数和在用户态及内核态之间进行的内存拷贝，这部分时间相
+对于通过网络伟输数据消耗的时间小了一个量级。
+
+在原理上，零拷贝相对于普通的 Read/Write Loop 减少了内存缓存空间使用和内存拷贝次数，从 CPU 运
+行时间占用看，提升理论上应该比较明显，可以***显著降低 CPU 占用率***；不需要内存缓存空间在
+***高并发场景下也可以减少内存占用率***。
 
 ## Benchmark
 
@@ -19,21 +26,57 @@
 nc -lU /tmp/zero_copy.sock >/dev/null && rm /tmp/zero_copy.sock
 ```
 
-| API                                 | Seconds | Diff   |
-| ----------------------------------- | ------- | ------ |
-| C read/send                         | 907ms   | 100%   |
-| C mmap/send                         | 266ms   | 29.3%  |
-| C sendfile                          | 131ms   | 14.4%  |
-| C splice/pipe                       | 158ms   | 17.4%  |
-| Rust std::io::copy                  | 577ms   | 63.6%  |
-| Rust nix::sys::sendfile::sendfile64 | 575ms   | 63.4%  |
-| Rust libc::sendfile64               | 545ms   | 60.1%  |
-| Rust read&write with buffer         | 915ms   | 100.1% |
+**Copy 1GB file from SSD to local Unix domain socket**
+
+-   Scenario: Copy 1GB file from SSD to local Unix domain socket
+-   File size: 1GB
+-   Unix Domain Socket Server: nc -lU /tmp/zero_copy.sock >/dev/null
+
+| API                                 | Time  | Diff   |
+| ----------------------------------- | ----- | ------ |
+| C read/send with buffer(4KB)        | 907ms | 100%   |
+| C read/send with buffer(8KB)        | 598ms | 65.9%  |
+| C read/send with buffer(16KB)       | 423ms | 46.6%  |
+| C read/send with buffer(32KB)       | 354ms | 39.0%  |
+| C mmap/send                         | 266ms | 29.3%  |
+| C sendfile                          | 131ms | 14.4%  |
+| C splice/pipe                       | 158ms | 17.4%  |
+| Rust read&write with buffer(4KB)    | 915ms | 100.1% |
+| Rust std::io::copy                  | 577ms | 63.6%  |
+| Rust libc::sendfile64               | 545ms | 60.1%  |
+| Rust nix::sys::sendfile::sendfile64 | 575ms | 63.4%  |
 
 > [!NOTE]
 > API splice/pipe use a pipe to connect filefd and sockfd, according to `man 2 spclie`,
 > the splice function requires one of file descriptor to be pipe, result in:
 > splice(filefd, pipefd[1]) and splice(pipefd[1], sockfd).
+
+**Copy 8GB file from tmpfs to local Unix domain socket**
+
+-   Scenario: Copy 8GB file from tmpfs to local Unix domain socket
+-   File size: 8GB
+-   Unix Domain Socket Server: nc -lU /tmp/zero_copy.sock >/dev/null
+
+| API                                 | Time   | Diff  |
+| ----------------------------------- | ------ | ----- |
+| Rust read&write with buffer(4KB)    | 7432ms | 100%  |
+| Rust read&write with buffer(8KB)    | 4688ms | 63.1% |
+| Rust std::io::copy                  | 4654ms | 62.6% |
+| Rust libc::sendfile64               | 4059ms | 54.6% |
+| Rust nix::sys::sendfile::sendfile64 | 3937ms | 53.0% |
+
+**Copy 20GB file from tmpfs to local Unix domain socket**
+
+-   Scenario: Copy 20GB file from tmpfs to local Unix domain socket
+-   File size: 20GB
+-   Unix Domain Socket Server: nc -lU /tmp/zero_copy.sock >/dev/null
+
+| API                                 | Time    | Diff  |
+| ----------------------------------- | ------- | ----- |
+| Rust read&write with buffer(4K)B    | 18336ms | 100%  |
+| Rust std::io::copy                  | 11334ms | 61.8% |
+| Rust libc::sendfile64               | 10091ms | 55.0% |
+| Rust nix::sys::sendfile::sendfile64 | 10061ms | 54.8% |
 
 ## Rust Zero-Copy [Source Code](<(https://github.com/rust-lang/rust/blob/8e37e151835d96d6a7415e93e6876561485a3354/library/std/src/sys/pal/unix/kernel_copy.rs)>)
 
