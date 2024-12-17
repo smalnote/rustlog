@@ -32,6 +32,13 @@ templates and usages of `wasm-pack`.
 
 ## 🚴 Usage
 
+### 🐑 Use `cargo install` to install tools
+
+```
+cargo install cargo-generate
+cargo install wasm-pack
+```
+
 ### 🐑 Use `cargo generate` to Clone this Template
 
 [Learn more about `cargo generate` here.](https://github.com/ashleygwilliams/cargo-generate)
