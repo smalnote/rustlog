@@ -10,6 +10,7 @@ members = [
     "leetcode",
     "cargo_crate_mod",
     "grpc_hello",
+    "wasm_permute",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
