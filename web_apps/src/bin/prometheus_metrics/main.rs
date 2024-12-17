@@ -7,6 +7,7 @@
 //! cargo run -p web_apps --bin prometheus_metrics
 //! ```
 
+mod build_info;
 mod device;
 mod observability;
 mod routes;
@@ -37,6 +38,7 @@ async fn start_main_server() -> Result<(), std::io::Error> {
 fn main_app() -> Router {
     Router::new()
         .route("/devices", get(routes::devices))
+        .route("/debug/build_info", get(routes::build_info))
         .route_layer(middleware::from_fn(observ::track_metrics))
 }
 
