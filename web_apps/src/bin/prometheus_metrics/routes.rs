@@ -1,6 +1,6 @@
 use axum::{http::StatusCode, response::IntoResponse};
 
-use crate::device::Device;
+use crate::{build_info::BuildInfo, device::Device};
 
 /// Returns a list of connected devices.
 pub async fn devices() -> impl IntoResponse {
@@ -36,4 +36,13 @@ pub async fn devices() -> impl IntoResponse {
     let devices: Vec<Device> = serde_json::from_str(&devices).unwrap();
 
     (StatusCode::OK, axum::Json(devices))
+}
+
+use lazy_static::lazy_static;
+lazy_static! {
+    static ref BUILD_INFO: BuildInfo = Default::default();
+}
+
+pub async fn build_info() -> impl IntoResponse {
+    (StatusCode::OK, axum::Json(BUILD_INFO.clone()))
 }

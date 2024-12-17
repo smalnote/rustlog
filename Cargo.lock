@@ -253,6 +253,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-targets",
 ]
@@ -1886,6 +1887,8 @@ name = "web_apps"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "chrono",
+ "lazy_static",
  "metrics",
  "metrics-exporter-prometheus",
  "serde",
