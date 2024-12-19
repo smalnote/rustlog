@@ -19,25 +19,52 @@ fn main() -> Result<()> {
     let method = &args[1];
     let file_path = &args[2];
     let socket_path = &args[3];
-    let now = Instant::now();
 
-    let file = File::open(file_path)?;
-    let socket = UnixStream::connect(socket_path)?;
-    match method.as_str() {
-        "read_write" => read_write(file, socket)?,
-        "std_io_copy" => copy_file_to_unix_domain_socket(file, socket)?,
-        "libc_sendfile" => libc_sendfile(file, socket)?,
-        "nix_sendfile" => nix_sendfile(file, socket)?,
-        _ => panic!("unsupported method {}", method),
+    if method != "tokio_io_copy" {
+        let now = Instant::now();
+        let file = File::open(file_path)?;
+        let socket = UnixStream::connect(socket_path)?;
+        match method.as_str() {
+            "read_write" => read_write(file, socket)?,
+            "std_io_copy" => copy_file_to_unix_domain_socket(file, socket)?,
+            "libc_sendfile" => libc_sendfile(file, socket)?,
+            "nix_sendfile" => nix_sendfile(file, socket)?,
+            _ => panic!("unsupported method {}", method),
+        }
+        let elapsed = now.elapsed();
+        println!("***Metrics: time elapsed: {}ms", elapsed.as_millis());
+    } else {
+        let current_thread = tokio::runtime::Builder::new_current_thread()
+            .enable_io()
+            .enable_time()
+            .build()
+            .expect("Create tokio runtime failed");
+        current_thread.block_on(async move {
+            let now = tokio::time::Instant::now();
+            let mut file = tokio::fs::File::open(file_path)
+                .await
+                .expect("Open file failed");
+            let mut socket = tokio::net::UnixStream::connect(socket_path)
+                .await
+                .expect("Connect unix domain socket failed");
+            let file_len = file
+                .metadata()
+                .await
+                .expect("Get file metadata filed")
+                .len();
+            let copied_len = tokio::io::copy(&mut file, &mut socket)
+                .await
+                .expect("Copy file to socket failed");
+            assert_eq!(copied_len, file_len);
+            let elapsed = now.elapsed();
+            println!("***Metrics: time elapsed: {}ms", elapsed.as_millis());
+        });
     }
-
-    let elapsed = now.elapsed();
-    println!("***Metrics: time elapsed: {}ms", elapsed.as_millis());
     Ok(())
 }
 
 fn read_write(file: File, socket: UnixStream) -> Result<()> {
-    let mut buf: [u8; 8192] = [0; 8192];
+    let mut buf: [u8; 4096] = [0; 4096];
     let mut bytes_left = file.metadata().unwrap().size() as usize;
     loop {
         let bytes_read = (&file).read(&mut buf[..])?;

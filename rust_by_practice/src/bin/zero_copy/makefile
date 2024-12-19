@@ -32,3 +32,7 @@ libc_sendfile:
 	$(eval method := libc_sendfile)
 test_libc_sendfile: nc_unix_socket_server libc_sendfile copy_command
 
+tokio_io_copy:
+	$(eval method := tokio_io_copy)
+test_tokio_io_copy: nc_unix_socket_server tokio_io_copy copy_command
+

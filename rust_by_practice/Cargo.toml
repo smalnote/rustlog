@@ -43,6 +43,8 @@ tokio = { version = "1.42.0", features = [
     "rt-multi-thread",
     "macros",
     "sync",
+    "io-util",
+    "fs",
 ] }
 axum = "0.7.9"
 lazy_static = "1.5.0"
