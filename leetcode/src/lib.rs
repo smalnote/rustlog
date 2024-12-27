@@ -1,3 +1,5 @@
+#[path = "./1014.best-sightseeing-pair.rs"]
+pub mod p1014_best_sightseeing_pair;
 pub mod p1456_max_vowels;
 pub mod p3203_find_minimum_diameter_after_mergin_two_trees;
 pub mod p46_permutations;
