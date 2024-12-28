@@ -1,3 +1,6 @@
+pub struct Solution;
+
+// @leet start
 // 740. Delete and Earn
 // You are given an integer array nums. You want to maximize the number of
 // points you get by performing the following operation any number of times:
@@ -23,9 +26,14 @@
 // dp_reserved[i] =
 //     max(dp_reserved[i-1], dp_deleted[i-1])
 // result = max(dp_reserved[n-1], dp_deleted[n-1])
-
-pub struct Solution;
-// @leet start
+//
+// 可简化为
+// dp[i] 是截至 point[i] 的最大点数
+// dp[i] =
+//   if points[i] == points[i-1] + 1
+//     max(dp[i-2] + poinst[i] * counts[i], dp[i-1])
+//   else
+//     max(dp[i-1] + points[i] * counts[i])
 use std::vec::IntoIter;
 impl Solution {
     pub fn delete_and_earn(mut nums: Vec<i32>) -> i32 {
