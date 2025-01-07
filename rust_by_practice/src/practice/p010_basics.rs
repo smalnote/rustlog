@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use std::ops::{Range, RangeInclusive};
+    use std::{
+        num::NonZeroU16,
+        ops::{Range, RangeInclusive},
+    };
 
     // variable declaration shadowing
     #[test]
@@ -159,10 +162,13 @@ mod tests {
         }
         println!("s = {s}");
 
-        assert_eq!((-128..128), Range {
-            start: -128,
-            end: 128
-        });
+        assert_eq!(
+            (-128..128),
+            Range {
+                start: -128,
+                end: 128
+            }
+        );
         assert_eq!(('a'..='z'), RangeInclusive::new('a', 'z'));
     }
 
@@ -312,5 +318,11 @@ mod tests {
         }
 
         println!("Running after panic catching");
+    }
+
+    #[test]
+    fn test_non_zero_numeric_types() {
+        let magic_number = unsafe { NonZeroU16::new_unchecked(42) };
+        assert_eq!(magic_number.trailing_zeros(), 1);
     }
 }
