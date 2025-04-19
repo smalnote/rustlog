@@ -1,16 +1,17 @@
 [workspace]
 resolver = "2"
 members = [
-    "rust_by_practice",
-    "hello_marco",
-    "hello_marco_derive",
-    "length",
-    "cargo_feature",
-    "web_apps",
-    "leetcode",
-    "cargo_crate_mod",
-    "grpc_hello",
-    "wasm_permute",
+  "rust_by_practice",
+  "hello_marco",
+  "hello_marco_derive",
+  "length",
+  "cargo_feature",
+  "web_apps",
+  "leetcode",
+  "cargo_crate_mod",
+  "grpc_hello",
+  "wasm_permute",
+  "edition2024",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
