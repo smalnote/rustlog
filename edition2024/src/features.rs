@@ -1,6 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use std::collections::{LinkedList, VecDeque};
+    use std::{
+        cell::RefCell,
+        collections::{LinkedList, VecDeque},
+        sync::RwLock,
+    };
 
     use async_std::task;
 
@@ -61,5 +65,51 @@ mod tests {
         println!("{squares:?}");
         println!("{cubes:?}");
         println!("{tesseracts:?}");
+    }
+
+    #[test]
+    fn if_let_borrow_checker() {
+        fn get_or_default(value: &RwLock<Option<bool>>, default_value: bool) -> bool {
+            if let Some(v) = *value.read().unwrap() {
+                v
+                // *value.read() borrow dropped here
+                // value.write in else is possible
+            } else {
+                let mut lock = value.write().unwrap();
+                if lock.is_none() {
+                    *lock = Some(default_value)
+                }
+                default_value
+            }
+        }
+
+        let lock = RwLock::<Option<bool>>::new(None);
+
+        let value = get_or_default(&lock, true);
+        assert!(value);
+    }
+
+    #[test]
+    fn temporary_borrow() {
+        fn temporary_borrow_len() -> usize {
+            let c = RefCell::new("Hello");
+
+            c.borrow().len()
+        }
+
+        assert_eq!(temporary_borrow_len(), 5);
+    }
+
+    #[test]
+    fn unsafe_extern_c_block() {
+        unsafe extern "C" {
+            pub safe fn sqrt(x: f64) -> f64;
+
+            pub unsafe fn strlen(p: *const std::ffi::c_char) -> usize;
+        }
+
+        assert_eq!(sqrt(9.0), 3.0);
+        let message = String::from("Hello");
+        assert_eq!(unsafe { strlen(message.as_ptr() as *const i8) }, 5);
     }
 }
