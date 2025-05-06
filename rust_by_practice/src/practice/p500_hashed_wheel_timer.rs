@@ -249,7 +249,7 @@ impl HashedWheelTimer {
             if deadline <= current {
                 return current;
             }
-            let sleep_ms = ((deadline - current + 999_999) / 1_000_000) as u64;
+            let sleep_ms = (deadline - current).div_ceil(1_000_000) as u64;
             thread::sleep(Duration::from_millis(sleep_ms));
         }
     }
