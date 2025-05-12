@@ -2,6 +2,9 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+// #[cfg_attr(condition, attr)]
+// if condition match, apply attr
+// Enable Deserialize & Serialize when enable feature "serde"
 #[derive(Debug, Clone, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum Role {
