@@ -12,6 +12,7 @@ members = [
   "samples/grpc_hello",
   "samples/edition2024",
   "samples/web_apps",
+  "samples/instant_chat"
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
