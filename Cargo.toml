@@ -5,13 +5,13 @@ members = [
   "hello_marco",
   "hello_marco_derive",
   "length",
-  "cargo_feature",
-  "web_apps",
   "leetcode",
-  "cargo_crate_mod",
-  "grpc_hello",
-  "wasm_permute",
-  "edition2024",
+  "samples/wasm_permute",
+  "samples/cargo_crate_mod",
+  "samples/cargo_feature",
+  "samples/grpc_hello",
+  "samples/edition2024",
+  "samples/web_apps",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
