@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package instantchat.v1;
+
+// User1 -> connect -> Server
+// { type: "connect", content: user_name }
+//
+// User1 <- user enter <- Server
+// User2 <- user enter <- Server
+// { type: "connect", content: user_name }
+//
+// User1 -> send message -> Server
+// { type: "message", content: message }
+//
+// User1 <- receive message <- Server
+// User2 <- receive message <- Server
+// { type: "message", content: message }
+//
+// User1 -> disconnect
+// User2 <- receive message <- Server
+// { type: "disconnect", content: user_name }
+
+// The greeting service definition.
+service InstantChatService {
+  // Chat connects to instant chat service
+  rpc Chat(stream ChatRequest) returns (stream ChatResponse) {}
+}
+
+enum Type {
+  TYPE_UNSPECIFIED = 0;
+  TYPE_CONNECT = 1;
+  TYPE_DISCONNECT = 2;
+  TYPE_MESSAGE = 3;
+}
+
+// The request message containing the user's name.
+message ChatRequest {
+  Type type = 1;
+  string content = 2;
+  google.protobuf.Timestamp at = 31;
+}
+
+// The response message containing the greetings
+message ChatResponse {
+  Type type = 1;
+  string content = 2;
+  google.protobuf.Timestamp at = 31;
+}
