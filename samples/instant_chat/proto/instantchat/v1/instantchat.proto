@@ -5,7 +5,7 @@ import "google/protobuf/timestamp.proto";
 package instantchat.v1;
 
 // User1 -> connect -> Server
-// { type: "connect", content: user_name }
+// metadata { username }
 //
 // User1 <- user enter <- Server
 // User2 <- user enter <- Server
@@ -46,5 +46,6 @@ message ChatRequest {
 message ChatResponse {
   Type type = 1;
   string content = 2;
+  string username = 3;
   google.protobuf.Timestamp at = 31;
 }
