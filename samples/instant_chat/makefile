@@ -2,7 +2,7 @@ run_server:
 	cargo run --package instant_chat --bin server -- --valkey-password="${VALKEY_PASSWORD}"
 
 run_client:
-	cargo run --package instant_chat --bin client
+	cargo run --package instant_chat --bin client -- --username devin
 
 grpcurl_list:
 	grpcurl -v -plaintext localhost:50051 list

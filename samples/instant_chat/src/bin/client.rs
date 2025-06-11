@@ -4,10 +4,11 @@ use crossterm::{
     event::{self, Event, KeyCode},
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, enable_raw_mode},
 };
+use regex::Regex;
 use std::{io, time::Duration};
 use tokio::{sync::mpsc, task};
 use tokio_stream::wrappers::ReceiverStream;
-use tonic::{Request, transport::Uri};
+use tonic::{Request, metadata::MetadataValue, transport::Uri};
 use tui::{
     Frame, Terminal,
     backend::CrosstermBackend,
@@ -26,6 +27,18 @@ struct Args {
     /// Address to bind to, e.g. [::1]:50051
     #[arg(long, default_value = "http://[::1]:50051")]
     addr: String,
+
+    #[arg(long, value_parser = validate_username)]
+    username: String,
+}
+/// 用户名只能是字母、数字、下划线，3~32 个字符
+fn validate_username(s: &str) -> Result<String, String> {
+    let re = Regex::new(r"^[a-zA-Z0-9_]{3,32}$").unwrap();
+    if re.is_match(s) {
+        Ok(s.to_string())
+    } else {
+        Err("Username must be length of 3~32, composite of alphanum and underscore".to_string())
+    }
 }
 
 #[tokio::main]
@@ -37,7 +50,11 @@ async fn main() -> anyhow::Result<()> {
 
     let (to_server_tx, to_server_rx) = mpsc::channel::<ChatRequest>(32);
     let outbound = ReceiverStream::new(to_server_rx);
-    let mut response = client.chat(Request::new(outbound)).await?.into_inner();
+    let mut chat_request = Request::new(outbound);
+    chat_request
+        .metadata_mut()
+        .insert("username", MetadataValue::try_from(&args.username)?);
+    let mut response = client.chat(chat_request).await?.into_inner();
 
     let (ui_msg_tx, mut ui_msg_rx) = mpsc::channel::<String>(128);
     let (input_tx, mut input_rx) = mpsc::channel::<String>(32);
@@ -48,7 +65,11 @@ async fn main() -> anyhow::Result<()> {
         let ui_msg_tx = ui_msg_tx.clone();
         task::spawn(async move {
             while let Ok(Some(reply)) = response.message().await {
-                let _ = ui_msg_tx.send(format!("Server: {}", reply.content)).await;
+                if !args.username.eq(&reply.username) {
+                    let _ = ui_msg_tx
+                        .send(format!("{}: {}", reply.username, reply.content))
+                        .await;
+                }
             }
         });
     }
