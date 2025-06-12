@@ -15,3 +15,4 @@
 - Connect/Disconnect message
 - Multiple chat room
 - Rusty refactor(implements Rust std lib if possible: From, Iterator, etc)
+- Gracefully shutdown

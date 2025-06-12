@@ -2,30 +2,30 @@ syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 
-package instantchat.v1;
+package instant_chat.v1;
 
 // User1 -> connect -> Server
 // metadata { username }
 //
 // User1 <- user enter <- Server
 // User2 <- user enter <- Server
-// { type: "connect", content: user_name }
+// { type: "connect", username: <username> }
 //
 // User1 -> send message -> Server
 // { type: "message", content: message }
 //
 // User1 <- receive message <- Server
 // User2 <- receive message <- Server
-// { type: "message", content: message }
+// { type: "message", username: <username>, content: message }
 //
 // User1 -> disconnect
 // User2 <- receive message <- Server
 // { type: "disconnect", content: user_name }
 
 // The greeting service definition.
-service InstantChatService {
+service InstantChat {
   // Chat connects to instant chat service
-  rpc Chat(stream ChatRequest) returns (stream ChatResponse) {}
+  rpc Chat(stream ClientMessage) returns (stream ServerMessage) {}
 }
 
 enum Type {
@@ -36,14 +36,14 @@ enum Type {
 }
 
 // The request message containing the user's name.
-message ChatRequest {
+message ClientMessage {
   Type type = 1;
   string content = 2;
   google.protobuf.Timestamp at = 31;
 }
 
 // The response message containing the greetings
-message ChatResponse {
+message ServerMessage {
   Type type = 1;
   string content = 2;
   string username = 3;

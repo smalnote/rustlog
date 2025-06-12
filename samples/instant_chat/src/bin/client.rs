@@ -16,9 +16,7 @@ use tui::{
     widgets::{Block, Borders, List, ListItem, Paragraph},
 };
 
-use instant_chat::instantchat::{
-    ChatRequest, Type, instant_chat_service_client::InstantChatServiceClient,
-};
+use instant_chat::stub::{ClientMessage, Type, instant_chat_client::InstantChatClient};
 
 /// InstantChat client
 #[derive(Parser, Debug)]
@@ -46,9 +44,9 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let _: Uri = args.addr.parse()?;
 
-    let mut client = InstantChatServiceClient::connect(args.addr).await?;
+    let mut client = InstantChatClient::connect(args.addr).await?;
 
-    let (to_server_tx, to_server_rx) = mpsc::channel::<ChatRequest>(32);
+    let (to_server_tx, to_server_rx) = mpsc::channel::<ClientMessage>(32);
     let outbound = ReceiverStream::new(to_server_rx);
     let mut chat_request = Request::new(outbound);
     chat_request
@@ -119,7 +117,7 @@ async fn main() -> anyhow::Result<()> {
                     "<ENTER>" => {
                         if !input_buffer.trim().is_empty() {
                             messages.push(format!("You: {}", input_buffer));
-                            let chat_request = ChatRequest {
+                            let chat_request = ClientMessage {
                                 r#type: Type::Message.into(),
                                 content: input_buffer.clone(),
                                 at: None,
