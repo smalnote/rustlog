@@ -3,6 +3,7 @@ use std::time::Duration;
 use futures::StreamExt;
 use redis::{AsyncTypedCommands, Client, RedisError, aio::MultiplexedConnection};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
+use tokio_util::sync::CancellationToken;
 
 pub struct ValkeyRepository {
     client: Client,
@@ -51,7 +52,11 @@ impl ValkeyRepository {
     }
 
     /// 订阅频道，返回一个 Receiver，外部用异步方式接收消息
-    pub async fn subscribe<T>(&self, channel: &str) -> Result<UnboundedReceiver<T>>
+    pub async fn subscribe<T>(
+        &self,
+        channel: &str,
+        shutdown: CancellationToken,
+    ) -> Result<UnboundedReceiver<T>>
     where
         T: FromPayload,
     {
@@ -62,15 +67,22 @@ impl ValkeyRepository {
 
         tokio::spawn(async move {
             let mut on_message = pubsub.on_message();
-            while let Some(message) = on_message.next().await {
-                match message.get_payload::<String>() {
-                    Ok(payload) => {
-                        let val = T::from_payload(payload);
-                        let _ = tx.send(val);
-                    }
-                    Err(err) => {
-                        eprintln!("Failed to parse payload: {:?}", err);
-                    }
+            loop {
+                tokio::select! {
+                    Some(message) = on_message.next() => {
+                        match message.get_payload::<String>() {
+                            Ok(payload) => {
+                                let val = T::from_payload(payload);
+                                let _ = tx.send(val);
+                            }
+                            Err(err) => {
+                                eprintln!("Failed to parse payload: {:?}", err);
+                            }
+                        }
+                    },
+                    _ = shutdown.cancelled() => {
+                        break;
+                    },
                 }
             }
         });

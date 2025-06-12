@@ -8,6 +8,7 @@ use regex::Regex;
 use std::{io, time::Duration};
 use tokio::{sync::mpsc, task};
 use tokio_stream::wrappers::ReceiverStream;
+use tokio_util::sync::CancellationToken;
 use tonic::{Request, metadata::MetadataValue, transport::Uri};
 use tui::{
     Frame, Terminal,
@@ -52,31 +53,14 @@ async fn main() -> anyhow::Result<()> {
     chat_request
         .metadata_mut()
         .insert("username", MetadataValue::try_from(&args.username)?);
-    let mut response = client.chat(chat_request).await?.into_inner();
+    let mut response_stream = client.chat(chat_request).await?.into_inner();
 
-    let (ui_msg_tx, mut ui_msg_rx) = mpsc::channel::<String>(128);
     let (input_tx, mut input_rx) = mpsc::channel::<String>(32);
-    let (quit_tx, mut quit_rx) = mpsc::channel::<()>(1);
-
-    // 接收任务
-    {
-        let ui_msg_tx = ui_msg_tx.clone();
-        task::spawn(async move {
-            while let Ok(Some(reply)) = response.message().await {
-                if !args.username.eq(&reply.username) {
-                    let _ = ui_msg_tx
-                        .send(format!("{}: {}", reply.username, reply.content))
-                        .await;
-                }
-            }
-        });
-    }
+    let quit_token = CancellationToken::new();
 
     // 输入任务
     {
-        // let ui_msg_tx = ui_msg_tx.clone();
-        let input_tx = input_tx.clone();
-        let quit_tx = quit_tx.clone();
+        let quit_token = quit_token.clone();
         task::spawn(async move {
             loop {
                 if event::poll(Duration::from_millis(100)).unwrap() {
@@ -92,12 +76,15 @@ async fn main() -> anyhow::Result<()> {
                                 input_tx.send("<BACKSPACE>".into()).await.ok();
                             }
                             KeyCode::Esc => {
-                                quit_tx.send(()).await.ok();
+                                quit_token.cancel();
                                 break;
                             }
                             _ => {}
                         }
                     }
+                }
+                if quit_token.is_cancelled() {
+                    break;
                 }
             }
         });
@@ -109,9 +96,19 @@ async fn main() -> anyhow::Result<()> {
     ui.draw(&messages, &input_buffer)?;
     loop {
         tokio::select! {
-            Some(msg) = ui_msg_rx.recv() => {
-                messages.push(msg);
-            }
+            reply = response_stream.message() => {
+                match reply {
+                    Ok(None) => {
+                        quit_token.cancel();
+                    },
+                    Ok(Some(reply)) => {
+                        if !reply.username.eq(&args.username) {
+                            messages.push(format!("{}: {}", reply.username, reply.content));
+                        }
+                    },
+                    Err(status) => messages.push(format!("(Server): {}", status)),
+                };
+            },
             Some(input) = input_rx.recv() => {
                 match input.as_str() {
                     "<ENTER>" => {
@@ -129,13 +126,16 @@ async fn main() -> anyhow::Result<()> {
                     "<BACKSPACE>" => { input_buffer.pop(); }
                     _ => input_buffer.push_str(&input),
                 }
-            }
-            _ = quit_rx.recv() => break,
+            },
+            _ = quit_token.cancelled() => {
+                // send close to server before exit
+                drop(to_server_tx);
+                break;
+            },
         }
         ui.draw(&messages, &input_buffer)?;
     }
 
-    // 清理
     ui.cleanup()
 }
 

@@ -1,6 +1,8 @@
 use clap::Parser;
 use instant_chat::stub::instant_chat_server::InstantChatServer;
 use instant_chat::valkey_chat_service::ValkeyChatService;
+use tokio::signal;
+use tokio_util::sync::CancellationToken;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
 
@@ -22,16 +24,18 @@ struct Args {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let addr = args.addr.parse()?;
+
+    let shutdown_token = CancellationToken::new();
 
     // URL form: redist://:password@host:port/?option=value
     let valkey_url = format!(
         "redis://:{}@{}/?protocol=resp3",
         &args.valkey_password, &args.valkey_addr
     );
-    let chat_service = ValkeyChatService::new(&valkey_url).await?;
+    let chat_service = ValkeyChatService::new(&valkey_url, shutdown_token.clone()).await?;
 
     println!("InstantChatServer listening on {}", addr);
 
@@ -43,7 +47,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Server::builder()
         .add_service(InstantChatServer::new(chat_service))
         .add_service(reflection_service)
-        .serve(addr)
+        .serve_with_shutdown(addr, async {
+            signal::ctrl_c()
+                .await
+                .expect("Failed to install CTRL+C handler");
+            println!("Shutdown signal received.");
+            shutdown_token.cancel();
+        })
         .await?;
 
     Ok(())
