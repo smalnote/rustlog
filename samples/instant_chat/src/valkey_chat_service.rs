@@ -1,7 +1,7 @@
 use std::pin::Pin;
 
-use crate::instantchat::instant_chat_service_server::InstantChatService;
-use crate::instantchat::{ChatRequest, ChatResponse};
+use crate::stub::instant_chat_server::InstantChat;
+use crate::stub::{ClientMessage, ServerMessage, Type};
 use crate::valkey_repository::{FromPayload, ValkeyRepository};
 use futures::Stream;
 use serde::{Deserialize, Serialize};
@@ -29,12 +29,12 @@ struct ChannelMessage {
 }
 
 #[tonic::async_trait]
-impl InstantChatService for ValkeyChatService {
-    type ChatStream = Pin<Box<dyn Stream<Item = Result<ChatResponse, Status>> + Send + 'static>>;
+impl InstantChat for ValkeyChatService {
+    type ChatStream = Pin<Box<dyn Stream<Item = Result<ServerMessage, Status>> + Send + 'static>>;
 
     async fn chat(
         &self,
-        request: Request<Streaming<ChatRequest>>,
+        request: Request<Streaming<ClientMessage>>,
     ) -> Result<tonic::Response<Self::ChatStream>, tonic::Status> {
         // extract username from metadata
         let username = request
@@ -71,7 +71,7 @@ impl InstantChatService for ValkeyChatService {
 
         let rx = self
             .repository
-            .subscribe::<Result<ChatResponse, Status>>("chatroom")
+            .subscribe::<Result<ServerMessage, Status>>("chatroom")
             .await
             .map_err(|err| tonic::Status::internal(format!("failed to subscribe: {:?}", err)))?;
         let output_stream = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
@@ -79,13 +79,13 @@ impl InstantChatService for ValkeyChatService {
     }
 }
 
-impl FromPayload for Result<ChatResponse, Status> {
-    fn from_payload(payload: String) -> Result<ChatResponse, Status> {
+impl FromPayload for Result<ServerMessage, Status> {
+    fn from_payload(payload: String) -> Result<ServerMessage, Status> {
         let channel_message: ChannelMessage = serde_json::from_str(&payload)
             .map_err(|_| Status::internal("failed to decode playload to channel message"))?;
 
-        Ok(ChatResponse {
-            r#type: 1,
+        Ok(ServerMessage {
+            r#type: Type::Message.into(),
             username: channel_message.username,
             content: channel_message.content,
             at: None,

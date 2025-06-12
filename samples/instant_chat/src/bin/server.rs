@@ -1,13 +1,8 @@
 use clap::Parser;
-use instant_chat::instantchat::instant_chat_service_server::InstantChatServiceServer;
+use instant_chat::stub::instant_chat_server::InstantChatServer;
 use instant_chat::valkey_chat_service::ValkeyChatService;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
-
-pub mod proto {
-    pub(crate) const FILE_DESCRIPTOR_SET: &[u8] =
-        tonic::include_file_descriptor_set!("instantchat_descriptor");
-}
 
 /// InstantChat server
 #[derive(Parser, Debug)]
@@ -41,12 +36,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("InstantChatServer listening on {}", addr);
 
     let reflection_service = Builder::configure()
-        .register_encoded_file_descriptor_set(proto::FILE_DESCRIPTOR_SET)
+        .register_encoded_file_descriptor_set(instant_chat::stub::INSTANTCHAT_DESCRIPTOR)
         .build_v1()
         .unwrap();
 
     Server::builder()
-        .add_service(InstantChatServiceServer::new(chat_service))
+        .add_service(InstantChatServer::new(chat_service))
         .add_service(reflection_service)
         .serve(addr)
         .await?;
