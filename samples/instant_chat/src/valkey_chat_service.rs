@@ -7,17 +7,25 @@ use futures::Stream;
 use serde::{Deserialize, Serialize};
 use tokio::task;
 use tokio_stream::StreamExt;
+use tokio_util::sync::CancellationToken;
 use tonic::{Request, Status, Streaming};
 
 #[allow(dead_code)]
 pub struct ValkeyChatService {
+    shutdown: CancellationToken,
     repository: ValkeyRepository,
 }
 
 impl ValkeyChatService {
-    pub async fn new(valkey_url: &str) -> Result<Self, redis::RedisError> {
+    pub async fn new(
+        valkey_url: &str,
+        shutdown: CancellationToken,
+    ) -> Result<Self, redis::RedisError> {
         let repository = ValkeyRepository::new(valkey_url).await?;
-        let service = ValkeyChatService { repository };
+        let service = ValkeyChatService {
+            shutdown,
+            repository,
+        };
         Ok(service)
     }
 }
@@ -49,29 +57,48 @@ impl InstantChat for ValkeyChatService {
         let mut inbound = request.into_inner();
 
         let mut channel = self.repository.get_channel("chatroom");
+        let shutdown_token = self.shutdown.clone();
         task::spawn(async move {
             let username = username.clone();
-            while let Some(req) = inbound.next().await {
-                if let Ok(req) = req {
-                    let channel_message = ChannelMessage {
-                        username: username.clone(),
-                        content: req.content,
-                    };
+            loop {
+                tokio::select! {
+                    req = inbound.next() => {
+                         match req {
+                            Some(Ok(req)) => {
+                            let channel_message = ChannelMessage {
+                                username: username.clone(),
+                                content: req.content,
+                            };
 
-                    let channel_message = serde_json::to_string(&channel_message)
-                        .map_err(|_| {
-                            Status::internal("failed to serialize channel message to json")
-                        })
-                        .unwrap();
+                            let channel_message = serde_json::to_string(&channel_message)
+                                .map_err(|_| {
+                                    Status::internal("failed to serialize channel message to json")
+                                })
+                                .unwrap();
 
-                    let _ = channel.publish(&channel_message).await;
+                            let _ = channel.publish(&channel_message).await;
+                            },
+                            Some(Err(status)) => {
+                                println!("user connection error: {} {}", status.code(), status.message());
+                                break;
+                            },
+                            None => {
+                                break;
+                            },
+                        }
+                    },
+                    _ = shutdown_token.cancelled() => {
+                        break;
+                    },
                 }
             }
+
+            println!("user {} disconnected", username);
         });
 
         let rx = self
             .repository
-            .subscribe::<Result<ServerMessage, Status>>("chatroom")
+            .subscribe::<Result<ServerMessage, Status>>("chatroom", self.shutdown.clone())
             .await
             .map_err(|err| tonic::Status::internal(format!("failed to subscribe: {:?}", err)))?;
         let output_stream = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
