@@ -3,6 +3,8 @@ pub mod p1014_best_sightseeing_pair;
 pub mod p1456_max_vowels;
 #[path = "./24.swap-nodes-in-pairs.rs"]
 pub mod p23;
+#[path = "./2616.minimize-the-maxmum-difference-of-pairs.rs"]
+pub mod p2616;
 pub mod p3203_find_minimum_diameter_after_mergin_two_trees;
 pub mod p46_permutations;
 #[path = "./494.target-sum.rs"]
