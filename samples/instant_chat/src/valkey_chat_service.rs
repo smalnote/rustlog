@@ -2,9 +2,9 @@ use std::pin::Pin;
 
 use crate::stub::instant_chat_server::InstantChat;
 use crate::stub::{ClientMessage, ServerMessage, Type};
-use crate::valkey_repository::{FromPayload, ValkeyRepository};
+use crate::valkey_repository::{ChannelMessage, FromChannelMessage, ValkeyRepository};
+use anyhow::Result;
 use futures::Stream;
-use serde::{Deserialize, Serialize};
 use tokio::task;
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
@@ -17,10 +17,7 @@ pub struct ValkeyChatService {
 }
 
 impl ValkeyChatService {
-    pub async fn new(
-        valkey_url: &str,
-        shutdown: CancellationToken,
-    ) -> Result<Self, redis::RedisError> {
+    pub async fn new(valkey_url: &str, shutdown: CancellationToken) -> Result<Self> {
         let repository = ValkeyRepository::new(valkey_url).await?;
         let service = ValkeyChatService {
             shutdown,
@@ -28,12 +25,6 @@ impl ValkeyChatService {
         };
         Ok(service)
     }
-}
-
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-struct ChannelMessage {
-    username: String,
-    content: String,
 }
 
 #[tonic::async_trait]
@@ -54,12 +45,24 @@ impl InstantChat for ValkeyChatService {
                     Status::invalid_argument("failed to get username(string) from metadata")
                 })
             })?;
-        let mut inbound = request.into_inner();
 
+        let rx = self
+            .repository
+            .subscribe::<Result<ServerMessage, Status>>("chatroom", self.shutdown.clone())
+            .await
+            .map_err(|err| tonic::Status::internal(format!("failed to subscribe: {:?}", err)))?;
+        let output_stream = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
+
+        let mut inbound = request.into_inner();
         let mut channel = self.repository.get_channel("chatroom");
         let shutdown_token = self.shutdown.clone();
         task::spawn(async move {
             let username = username.clone();
+            let connect_message = ChannelMessage {
+                username: "(System)".into(),
+                content: format!("user {} connected", username),
+            };
+            let _ = channel.publish(&connect_message).await;
             loop {
                 tokio::select! {
                     req = inbound.next() => {
@@ -69,12 +72,6 @@ impl InstantChat for ValkeyChatService {
                                 username: username.clone(),
                                 content: req.content,
                             };
-
-                            let channel_message = serde_json::to_string(&channel_message)
-                                .map_err(|_| {
-                                    Status::internal("failed to serialize channel message to json")
-                                })
-                                .unwrap();
 
                             let _ = channel.publish(&channel_message).await;
                             },
@@ -93,29 +90,29 @@ impl InstantChat for ValkeyChatService {
                 }
             }
 
+            let disconnect_message = ChannelMessage {
+                username: "(System)".into(),
+                content: format!("user {} disconnected", username),
+            };
+            let _ = channel.publish(&disconnect_message).await;
             println!("user {} disconnected", username);
         });
 
-        let rx = self
-            .repository
-            .subscribe::<Result<ServerMessage, Status>>("chatroom", self.shutdown.clone())
-            .await
-            .map_err(|err| tonic::Status::internal(format!("failed to subscribe: {:?}", err)))?;
-        let output_stream = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
         Ok(tonic::Response::new(Box::pin(output_stream)))
     }
 }
 
-impl FromPayload for Result<ServerMessage, Status> {
-    fn from_payload(payload: String) -> Result<ServerMessage, Status> {
-        let channel_message: ChannelMessage = serde_json::from_str(&payload)
-            .map_err(|_| Status::internal("failed to decode playload to channel message"))?;
-
-        Ok(ServerMessage {
-            r#type: Type::Message.into(),
-            username: channel_message.username,
-            content: channel_message.content,
-            at: None,
-        })
+impl FromChannelMessage for Result<ServerMessage, Status> {
+    fn from(channel_message: Result<ChannelMessage>) -> Result<ServerMessage, Status> {
+        channel_message
+            .map(|m| ServerMessage {
+                r#type: Type::Message.into(),
+                username: m.username,
+                content: m.content,
+                at: None,
+            })
+            .map_err(|err| {
+                Status::data_loss(format!("extract message from repository failed: {}", err))
+            })
     }
 }

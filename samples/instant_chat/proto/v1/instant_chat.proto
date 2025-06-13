@@ -7,8 +7,8 @@ package instant_chat.v1;
 // User1 -> connect -> Server
 // metadata { username }
 //
-// User1 <- user enter <- Server
-// User2 <- user enter <- Server
+// User1 <- user connect <- Server
+// User2 <- user connect <- Server
 // { type: "connect", username: <username> }
 //
 // User1 -> send message -> Server
@@ -19,7 +19,7 @@ package instant_chat.v1;
 // { type: "message", username: <username>, content: message }
 //
 // User1 -> disconnect
-// User2 <- receive message <- Server
+// User2 <- user disconnect <- Server
 // { type: "disconnect", content: user_name }
 
 // The greeting service definition.
