@@ -8,12 +8,43 @@ use futures::Stream;
 use tokio::task;
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
+use tonic::metadata::MetadataMap;
 use tonic::{Request, Status, Streaming};
 
 #[allow(dead_code)]
 pub struct ValkeyChatService {
     shutdown: CancellationToken,
     repository: ValkeyRepository,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct ChatMetadata {
+    username: String,
+    chatroom: String,
+}
+
+impl TryFrom<&MetadataMap> for ChatMetadata {
+    type Error = Status;
+
+    fn try_from(m: &MetadataMap) -> std::result::Result<Self, Self::Error> {
+        let username = m
+            .get("username")
+            .ok_or(Status::invalid_argument("no username in metadata"))
+            .and_then(|username| {
+                username.to_str().map(|str| str.to_owned()).map_err(|_| {
+                    Status::invalid_argument("failed to get username(string) from metadata")
+                })
+            })?;
+        let chatroom = m
+            .get("chatroom")
+            .ok_or(Status::invalid_argument("no chatroom in metadata"))
+            .and_then(|username| {
+                username.to_str().map(|str| str.to_owned()).map_err(|_| {
+                    Status::invalid_argument("failed to get chatroom(string) from metadata")
+                })
+            })?;
+        Ok(ChatMetadata { username, chatroom })
+    }
 }
 
 impl ValkeyChatService {
@@ -35,32 +66,22 @@ impl InstantChat for ValkeyChatService {
         &self,
         request: Request<Streaming<ClientMessage>>,
     ) -> Result<tonic::Response<Self::ChatStream>, tonic::Status> {
-        // extract username from metadata
-        let username = request
-            .metadata()
-            .get("username")
-            .ok_or(Status::invalid_argument("no username in metadata"))
-            .and_then(|username| {
-                username.to_str().map(|str| str.to_owned()).map_err(|_| {
-                    Status::invalid_argument("failed to get username(string) from metadata")
-                })
-            })?;
+        let meta: ChatMetadata = request.metadata().try_into()?;
 
+        let chat_token = self.shutdown.child_token();
         let rx = self
             .repository
-            .subscribe::<Result<ServerMessage, Status>>("chatroom", self.shutdown.clone())
+            .subscribe::<Result<ServerMessage, Status>>(&meta.chatroom, chat_token.clone())
             .await
             .map_err(|err| tonic::Status::internal(format!("failed to subscribe: {:?}", err)))?;
         let output_stream = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
 
         let mut inbound = request.into_inner();
-        let mut channel = self.repository.get_channel("chatroom");
-        let shutdown_token = self.shutdown.clone();
+        let mut channel = self.repository.get_channel(&meta.chatroom);
         task::spawn(async move {
-            let username = username.clone();
             let connect_message = ChannelMessage {
                 username: "(System)".into(),
-                content: format!("user {} connected", username),
+                content: format!("user {} connected", &meta.username),
             };
             let _ = channel.publish(&connect_message).await;
             loop {
@@ -69,7 +90,7 @@ impl InstantChat for ValkeyChatService {
                          match req {
                             Some(Ok(req)) => {
                             let channel_message = ChannelMessage {
-                                username: username.clone(),
+                                username: meta.username.clone(),
                                 content: req.content,
                             };
 
@@ -84,18 +105,22 @@ impl InstantChat for ValkeyChatService {
                             },
                         }
                     },
-                    _ = shutdown_token.cancelled() => {
+                    _ = chat_token.cancelled() => {
                         break;
                     },
                 }
             }
 
+            chat_token.cancel();
             let disconnect_message = ChannelMessage {
                 username: "(System)".into(),
-                content: format!("user {} disconnected", username),
+                content: format!("user {} disconnected", &meta.username),
             };
             let _ = channel.publish(&disconnect_message).await;
-            println!("user {} disconnected", username);
+            println!(
+                "user {} disconnected from chatroom {}",
+                &meta.username, &meta.chatroom
+            );
         });
 
         Ok(tonic::Response::new(Box::pin(output_stream)))

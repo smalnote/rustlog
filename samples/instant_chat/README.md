@@ -13,10 +13,11 @@
 
 - Support username(passed by gRPC header) [OK]
 - Connect/Disconnect message [OK]
-- Multiple chat room
+- Named chat room [OK]
 - Gracefully shutdown [OK]
 - Rusty refactor(implements Rust std lib if possible: From, Iterator, etc)
 - Enable TLS [OK]
+- Structured log
 
 > [!CAUTION]
 > Gracefully shutting down tokio::main need to exit all task, or it will stuck.
