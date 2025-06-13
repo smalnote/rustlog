@@ -4,11 +4,12 @@ run_server:
 		--tls-cert="./devin.lan.crt" --tls-key="./devin.lan.key"
 
 username ?= devin
+chatroom ?= public
 run_client:
 	cargo run --package instant_chat --bin instant-chat-client -- \
 		--addr https://arc.devin.lan:50051 \
 		--tls-ca="./devin-rootCA.pem" \
-		--username $(username)
+		--username $(username) --chatroom $(chatroom)
 
 grpcurl_list:
 	grpcurl -v -cacert "./devin-rootCA.pem" -plaintext arc.devin.lan:50051 list

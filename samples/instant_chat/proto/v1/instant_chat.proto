@@ -5,7 +5,7 @@ import "google/protobuf/timestamp.proto";
 package instant_chat.v1;
 
 // User1 -> connect -> Server
-// metadata { username }
+// metadata { username, chatroom }
 //
 // User1 <- user connect <- Server
 // User2 <- user connect <- Server

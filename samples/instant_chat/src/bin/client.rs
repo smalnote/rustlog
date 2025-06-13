@@ -31,19 +31,22 @@ struct Args {
     #[arg(long, default_value = "http://[::1]:50051")]
     addr: String,
 
-    #[arg(long, value_parser = validate_username)]
+    #[arg(long, value_parser = validate_name)]
     username: String,
+
+    #[arg(long, value_parser = validate_name, default_value = "public")]
+    chatroom: String,
 
     #[arg(long, help = "TLS CA file")]
     tls_ca: String,
 }
 /// 用户名只能是字母、数字、下划线，3~32 个字符
-fn validate_username(s: &str) -> Result<String, String> {
+fn validate_name(s: &str) -> Result<String, String> {
     let re = Regex::new(r"^[a-zA-Z0-9_]{3,32}$").unwrap();
     if re.is_match(s) {
         Ok(s.to_string())
     } else {
-        Err("Username must be length of 3~32, composite of alphanum and underscore".to_string())
+        Err("must be length of 3~32, composite of alphanum and underscore".to_string())
     }
 }
 
@@ -68,9 +71,9 @@ async fn main() -> anyhow::Result<()> {
     let (to_server_tx, to_server_rx) = mpsc::channel::<ClientMessage>(32);
     let outbound = ReceiverStream::new(to_server_rx);
     let mut chat_request = Request::new(outbound);
-    chat_request
-        .metadata_mut()
-        .insert("username", MetadataValue::try_from(&args.username)?);
+    let metadata = chat_request.metadata_mut();
+    metadata.insert("username", MetadataValue::try_from(&args.username)?);
+    metadata.insert("chatroom", MetadataValue::try_from(&args.chatroom)?);
     let mut response_stream = client.chat(chat_request).await?.into_inner();
 
     let (input_tx, mut input_rx) = mpsc::channel::<String>(32);
@@ -108,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    let mut ui = Ui::new()?;
+    let mut ui = Ui::new(&args.chatroom)?;
     let mut messages = vec![];
     let mut input_buffer = String::new();
     ui.draw(&messages, &input_buffer)?;
@@ -158,11 +161,12 @@ async fn main() -> anyhow::Result<()> {
 }
 
 pub struct Ui {
+    chatroom: String,
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
 }
 
 impl Ui {
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new(chatroom: &str) -> anyhow::Result<Self> {
         // 启动 TUI
         enable_raw_mode()?;
         let mut stdout = io::stdout();
@@ -170,17 +174,25 @@ impl Ui {
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
         terminal.clear()?;
-        Ok(Self { terminal })
+        Ok(Self {
+            chatroom: chatroom.into(),
+            terminal,
+        })
     }
 
     pub fn draw(&mut self, messages: &[String], input: &str) -> anyhow::Result<()> {
         self.terminal.draw(|f| {
-            Self::render_ui(f, messages, input);
+            Self::render_ui(f, &self.chatroom, messages, input);
         })?;
         Ok(())
     }
 
-    fn render_ui<B: tui::backend::Backend>(f: &mut Frame<B>, messages: &[String], input: &str) {
+    fn render_ui<B: tui::backend::Backend>(
+        f: &mut Frame<B>,
+        chatroom: &str,
+        messages: &[String],
+        input: &str,
+    ) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
@@ -189,8 +201,11 @@ impl Ui {
 
         let items: Vec<ListItem> = messages.iter().map(|m| ListItem::new(m.as_str())).collect();
 
-        let message_list =
-            List::new(items).block(Block::default().borders(Borders::ALL).title("Chat"));
+        let message_list = List::new(items).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!("Chatroom: {}", chatroom)),
+        );
         f.render_widget(message_list, chunks[0]);
 
         let input_box =
