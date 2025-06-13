@@ -9,7 +9,11 @@ use std::{io, time::Duration};
 use tokio::{sync::mpsc, task};
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::sync::CancellationToken;
-use tonic::{Request, metadata::MetadataValue, transport::Uri};
+use tonic::{
+    Request,
+    metadata::MetadataValue,
+    transport::{Certificate, Channel, ClientTlsConfig, Uri},
+};
 use tui::{
     Frame, Terminal,
     backend::CrosstermBackend,
@@ -29,6 +33,9 @@ struct Args {
 
     #[arg(long, value_parser = validate_username)]
     username: String,
+
+    #[arg(long, help = "TLS CA file")]
+    tls_ca: String,
 }
 /// 用户名只能是字母、数字、下划线，3~32 个字符
 fn validate_username(s: &str) -> Result<String, String> {
@@ -43,9 +50,20 @@ fn validate_username(s: &str) -> Result<String, String> {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let _: Uri = args.addr.parse()?;
+    let addr: Uri = args.addr.parse()?;
 
-    let mut client = InstantChatClient::connect(args.addr).await?;
+    let domain = addr
+        .host()
+        .ok_or("no domain name in addr")
+        .map_err(|err| anyhow::format_err!("{err}"))?;
+    let ca_cert = tokio::fs::read(args.tls_ca).await?;
+    let ca = Certificate::from_pem(ca_cert);
+    let tls = ClientTlsConfig::new()
+        .ca_certificate(ca)
+        .domain_name(domain);
+
+    let channel = Channel::builder(addr).tls_config(tls)?.connect().await?;
+    let mut client = InstantChatClient::new(channel);
 
     let (to_server_tx, to_server_rx) = mpsc::channel::<ClientMessage>(32);
     let outbound = ReceiverStream::new(to_server_rx);

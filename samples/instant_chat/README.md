@@ -16,6 +16,7 @@
 - Multiple chat room
 - Gracefully shutdown [OK]
 - Rusty refactor(implements Rust std lib if possible: From, Iterator, etc)
+- Enable TLS [OK]
 
 > [!CAUTION]
 > Gracefully shutting down tokio::main need to exit all task, or it will stuck.
