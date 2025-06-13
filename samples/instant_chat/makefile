@@ -1,8 +1,7 @@
 run_server:
 	cargo run --package instant_chat --bin instant-chat-server -- \
-		--valkey-password="${VALKEY_PASSWORD}" \
 		--tls-cert="./devin.lan.crt" --tls-key="./devin.lan.key" \
-		--log-level="instant_chat=trace"
+		--log-level="instant_chat=debug"
 
 username ?= devin
 chatroom ?= public

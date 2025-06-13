@@ -78,7 +78,7 @@ impl ValkeyRepository {
         debug!(channel, "subscribed to channel");
 
         let channel = channel.to_string();
-        tokio::spawn(async move {
+        let poll_message_task = async move {
             let mut on_message = pubsub.on_message();
             loop {
                 tokio::select! {
@@ -104,7 +104,8 @@ impl ValkeyRepository {
                 }
             }
             debug!(channel, "unsubscribed from channel");
-        });
+        };
+        tokio::spawn(poll_message_task);
 
         Ok(rx)
     }

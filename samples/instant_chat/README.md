@@ -15,9 +15,9 @@
 - Connect/Disconnect message [OK]
 - Named chat room [OK]
 - Gracefully shutdown [OK]
-- Rusty refactor(implements Rust std lib if possible: From, Iterator, etc)
+- Rusty refactor(implements Rust std lib if possible: From, Iterator, etc) [OK]
 - Enable TLS [OK]
-- Structured log
+- Structured log [OK]
 
 > [!CAUTION]
 > Gracefully shutting down tokio::main need to exit all task, or it will stuck.
