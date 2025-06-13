@@ -68,8 +68,9 @@ impl InstantChat for ValkeyChatService {
         request: Request<Streaming<ClientMessage>>,
     ) -> Result<tonic::Response<Self::ChatStream>, tonic::Status> {
         let meta: ChatMetadata = request.metadata().try_into()?;
-
         let chat_token = self.shutdown.child_token();
+
+        // listen to chatroom channel
         let rx = self
             .repository
             .subscribe::<Result<ServerMessage, Status>>(&meta.chatroom, chat_token.clone())
@@ -79,7 +80,7 @@ impl InstantChat for ValkeyChatService {
 
         let mut inbound = request.into_inner();
         let mut channel = self.repository.get_channel(&meta.chatroom);
-        task::spawn(async move {
+        let handle_client_message_task = async move {
             let connect_message = ChannelMessage {
                 username: "(System)".into(),
                 content: format!("user {} connected", &meta.username),
@@ -128,7 +129,8 @@ impl InstantChat for ValkeyChatService {
                 chatroom = &meta.chatroom,
                 "user disconnected from chatroom"
             );
-        });
+        };
+        task::spawn(handle_client_message_task);
 
         Ok(tonic::Response::new(Box::pin(output_stream)))
     }

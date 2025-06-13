@@ -21,7 +21,7 @@ struct Args {
     valkey_addr: String,
 
     /// Valkey/Redis password
-    #[arg(long)]
+    #[arg(long, env = "VALKEY_PASSWORD")]
     valkey_password: String,
 
     #[arg(long, help = "TLS certificate file")]
@@ -30,10 +30,20 @@ struct Args {
     #[arg(long, help = "TLS key file")]
     tls_key: String,
 
-    #[arg(long, help = "Log level, e.g. info, debug, error")]
-    log_level: Option<String>,
+    #[arg(
+        long,
+        env = "RUST_LOG",
+        default_value = "error",
+        help = "Log level, e.g. info, debug, error, instant_chat=trace"
+    )]
+    log_level: String,
 
-    #[arg(long, help = "Log format in JSON", default_value = "false")]
+    #[arg(
+        long,
+        env = "LOG_JSON",
+        help = "Log format in JSON",
+        default_value = "false"
+    )]
     log_json: bool,
 }
 
@@ -46,10 +56,7 @@ async fn main() -> anyhow::Result<()> {
     let key = tokio::fs::read(args.tls_key).await?;
     let identity = Identity::from_pem(cert, key);
 
-    let env_filter = args
-        .log_level
-        .map(EnvFilter::new)
-        .unwrap_or(EnvFilter::from_default_env());
+    let env_filter = EnvFilter::new(args.log_level);
 
     if args.log_json {
         tracing_subscriber::fmt()
