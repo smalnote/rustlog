@@ -1,7 +1,9 @@
 use std::time::Duration;
 
+use anyhow::Result;
 use futures::StreamExt;
-use redis::{AsyncTypedCommands, Client, RedisError, aio::MultiplexedConnection};
+use redis::{AsyncTypedCommands, Client, aio::MultiplexedConnection};
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 use tokio_util::sync::CancellationToken;
 
@@ -10,7 +12,11 @@ pub struct ValkeyRepository {
     pub_conn: MultiplexedConnection,
 }
 
-type Result<T> = std::result::Result<T, RedisError>;
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct ChannelMessage {
+    pub username: String,
+    pub content: String,
+}
 
 pub struct ChannelPublisher {
     channel: String,
@@ -24,13 +30,17 @@ impl ChannelPublisher {
             pub_conn,
         }
     }
-    pub async fn publish(&mut self, message: &str) -> Result<usize> {
-        self.pub_conn.publish(self.channel.clone(), message).await
+    pub async fn publish(&mut self, message: &ChannelMessage) -> Result<usize> {
+        let message = serde_json::to_string(message)?;
+        self.pub_conn
+            .publish(&self.channel, message)
+            .await
+            .map_err(anyhow::Error::new)
     }
 }
 
-pub trait FromPayload: Send + 'static {
-    fn from_payload(payload: String) -> Self;
+pub trait FromChannelMessage: Send + 'static {
+    fn from(message: Result<ChannelMessage>) -> Self;
 }
 
 impl ValkeyRepository {
@@ -58,7 +68,7 @@ impl ValkeyRepository {
         shutdown: CancellationToken,
     ) -> Result<UnboundedReceiver<T>>
     where
-        T: FromPayload,
+        T: FromChannelMessage,
     {
         let mut pubsub = self.client.get_async_pubsub().await?;
         pubsub.subscribe(channel).await?;
@@ -69,15 +79,20 @@ impl ValkeyRepository {
             let mut on_message = pubsub.on_message();
             loop {
                 tokio::select! {
-                    Some(message) = on_message.next() => {
-                        match message.get_payload::<String>() {
-                            Ok(payload) => {
-                                let val = T::from_payload(payload);
-                                let _ = tx.send(val);
+                    message = on_message.next() => {
+                        if let Some(message) = message {
+                            match message.get_payload::<String>() {
+                                Ok(payload) => {
+                                    let channel_message: Result<ChannelMessage> = serde_json::from_str(&payload)
+                                        .map_err(anyhow::Error::new);
+                                    let _ = tx.send(T::from(channel_message));
+                                }
+                                Err(err) => {
+                                    let _ = tx.send(T::from(Err(anyhow::Error::new(err))));
+                                }
                             }
-                            Err(err) => {
-                                eprintln!("Failed to parse payload: {:?}", err);
-                            }
+                        } else {
+                            break;
                         }
                     },
                     _ = shutdown.cancelled() => {
