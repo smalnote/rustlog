@@ -5,6 +5,8 @@ use tokio::signal;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::{Identity, Server, ServerTlsConfig};
 use tonic_reflection::server::Builder;
+use tracing::info;
+use tracing_subscriber::EnvFilter;
 
 /// InstantChat server
 #[derive(Parser, Debug)]
@@ -27,6 +29,12 @@ struct Args {
 
     #[arg(long, help = "TLS key file")]
     tls_key: String,
+
+    #[arg(long, help = "Log level, e.g. info, debug, error")]
+    log_level: Option<String>,
+
+    #[arg(long, help = "Log format in JSON", default_value = "false")]
+    log_json: bool,
 }
 
 #[tokio::main]
@@ -38,6 +46,24 @@ async fn main() -> anyhow::Result<()> {
     let key = tokio::fs::read(args.tls_key).await?;
     let identity = Identity::from_pem(cert, key);
 
+    let env_filter = args
+        .log_level
+        .map(EnvFilter::new)
+        .unwrap_or(EnvFilter::from_default_env());
+
+    if args.log_json {
+        tracing_subscriber::fmt()
+            .json()
+            .with_env_filter(env_filter)
+            .with_target(true)
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(env_filter)
+            .with_target(true)
+            .init();
+    }
+
     let shutdown_token = CancellationToken::new();
 
     // URL form: redist://:password@host:port/?option=value
@@ -47,7 +73,7 @@ async fn main() -> anyhow::Result<()> {
     );
     let chat_service = ValkeyChatService::new(&valkey_url, shutdown_token.clone()).await?;
 
-    println!("InstantChatServer listening on {}", addr);
+    info!(?addr, "starting instant chat server");
 
     let reflection_service = Builder::configure()
         .register_encoded_file_descriptor_set(instant_chat::stub::INSTANTCHAT_DESCRIPTOR)
@@ -62,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
             signal::ctrl_c()
                 .await
                 .expect("Failed to install CTRL+C handler");
-            println!("Shutdown signal received.");
+            info!("shutting down server ...");
             shutdown_token.cancel();
         })
         .await?;

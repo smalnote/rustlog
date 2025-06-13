@@ -6,6 +6,7 @@ use redis::{AsyncTypedCommands, Client, aio::MultiplexedConnection};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 use tokio_util::sync::CancellationToken;
+use tracing::debug;
 
 pub struct ValkeyRepository {
     client: Client,
@@ -65,16 +66,18 @@ impl ValkeyRepository {
     pub async fn subscribe<T>(
         &self,
         channel: &str,
-        shutdown: CancellationToken,
+        token: CancellationToken,
     ) -> Result<UnboundedReceiver<T>>
     where
         T: FromChannelMessage,
     {
         let mut pubsub = self.client.get_async_pubsub().await?;
         pubsub.subscribe(channel).await?;
-
         let (tx, rx) = mpsc::unbounded_channel();
 
+        debug!(channel, "subscribed to channel");
+
+        let channel = channel.to_string();
         tokio::spawn(async move {
             let mut on_message = pubsub.on_message();
             loop {
@@ -95,11 +98,12 @@ impl ValkeyRepository {
                             break;
                         }
                     },
-                    _ = shutdown.cancelled() => {
+                    _ = token.cancelled() => {
                         break;
                     },
                 }
             }
+            debug!(channel, "unsubscribed from channel");
         });
 
         Ok(rx)

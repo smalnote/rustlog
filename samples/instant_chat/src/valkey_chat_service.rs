@@ -10,6 +10,7 @@ use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 use tonic::metadata::MetadataMap;
 use tonic::{Request, Status, Streaming};
+use tracing::{debug, error};
 
 #[allow(dead_code)]
 pub struct ValkeyChatService {
@@ -84,6 +85,11 @@ impl InstantChat for ValkeyChatService {
                 content: format!("user {} connected", &meta.username),
             };
             let _ = channel.publish(&connect_message).await;
+            debug!(
+                username = &meta.username,
+                chatroom = &meta.chatroom,
+                "user connected to chatroom"
+            );
             loop {
                 tokio::select! {
                     req = inbound.next() => {
@@ -97,7 +103,7 @@ impl InstantChat for ValkeyChatService {
                             let _ = channel.publish(&channel_message).await;
                             },
                             Some(Err(status)) => {
-                                println!("user connection error: {} {}", status.code(), status.message());
+                                error!(code = ?status.code(), message = ?status.message(), "user connection error");
                                 break;
                             },
                             None => {
@@ -117,9 +123,10 @@ impl InstantChat for ValkeyChatService {
                 content: format!("user {} disconnected", &meta.username),
             };
             let _ = channel.publish(&disconnect_message).await;
-            println!(
-                "user {} disconnected from chatroom {}",
-                &meta.username, &meta.chatroom
+            debug!(
+                username = &meta.username,
+                chatroom = &meta.chatroom,
+                "user disconnected from chatroom"
             );
         });
 

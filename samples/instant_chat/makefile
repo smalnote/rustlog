@@ -1,7 +1,8 @@
 run_server:
 	cargo run --package instant_chat --bin instant-chat-server -- \
 		--valkey-password="${VALKEY_PASSWORD}" \
-		--tls-cert="./devin.lan.crt" --tls-key="./devin.lan.key"
+		--tls-cert="./devin.lan.crt" --tls-key="./devin.lan.key" \
+		--log-level="instant_chat=trace"
 
 username ?= devin
 chatroom ?= public
@@ -22,3 +23,6 @@ run_valkey:
 
 connect_valkey:
 	podman exec -it valkey valkey-cli -a "${VALKEY_PASSWORD}"
+
+release:
+	cargo build --release --package instant_chat
