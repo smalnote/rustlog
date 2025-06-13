@@ -1,12 +1,17 @@
 run_server:
-	cargo run --package instant_chat --bin instant-chat-server -- --valkey-password="${VALKEY_PASSWORD}"
+	cargo run --package instant_chat --bin instant-chat-server -- \
+		--valkey-password="${VALKEY_PASSWORD}" \
+		--tls-cert="./devin.lan.crt" --tls-key="./devin.lan.key"
 
 username ?= devin
 run_client:
-	cargo run --package instant_chat --bin instant-chat-client -- --username $(username)
+	cargo run --package instant_chat --bin instant-chat-client -- \
+		--addr https://arc.devin.lan:50051 \
+		--tls-ca="./devin-rootCA.pem" \
+		--username $(username)
 
 grpcurl_list:
-	grpcurl -v -plaintext localhost:50051 list
+	grpcurl -v -cacert "./devin-rootCA.pem" -plaintext arc.devin.lan:50051 list
 
 run_valkey:
 	podman run -d --rm --name valkey \

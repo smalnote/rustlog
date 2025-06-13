@@ -3,7 +3,7 @@ use instant_chat::stub::instant_chat_server::InstantChatServer;
 use instant_chat::valkey_chat_service::ValkeyChatService;
 use tokio::signal;
 use tokio_util::sync::CancellationToken;
-use tonic::transport::Server;
+use tonic::transport::{Identity, Server, ServerTlsConfig};
 use tonic_reflection::server::Builder;
 
 /// InstantChat server
@@ -11,7 +11,7 @@ use tonic_reflection::server::Builder;
 #[command(name = "instantchat-server", author, version, about)]
 struct Args {
     /// Address to bind to, e.g. [::1]:50051
-    #[arg(long, default_value = "[::1]:50051")]
+    #[arg(long, default_value = "0.0.0.0:50051")]
     addr: String,
 
     /// Valkey/Redis host:port, e.g. 127.0.0.1:6379
@@ -21,12 +21,22 @@ struct Args {
     /// Valkey/Redis password
     #[arg(long)]
     valkey_password: String,
+
+    #[arg(long, help = "TLS certificate file")]
+    tls_cert: String,
+
+    #[arg(long, help = "TLS key file")]
+    tls_key: String,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let addr = args.addr.parse()?;
+
+    let cert = tokio::fs::read(args.tls_cert).await?;
+    let key = tokio::fs::read(args.tls_key).await?;
+    let identity = Identity::from_pem(cert, key);
 
     let shutdown_token = CancellationToken::new();
 
@@ -45,6 +55,7 @@ async fn main() -> anyhow::Result<()> {
         .unwrap();
 
     Server::builder()
+        .tls_config(ServerTlsConfig::new().identity(identity))?
         .add_service(InstantChatServer::new(chat_service))
         .add_service(reflection_service)
         .serve_with_shutdown(addr, async {
