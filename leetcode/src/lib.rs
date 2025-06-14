@@ -3,8 +3,12 @@ pub mod p1014_best_sightseeing_pair;
 pub mod p1456_max_vowels;
 #[path = "./24.swap-nodes-in-pairs.rs"]
 pub mod p23;
+#[path = "./2425.bitwise-xor-of-all-pairings.rs"]
+pub mod p2425;
 #[path = "./2616.minimize-the-maxmum-difference-of-pairs.rs"]
 pub mod p2616;
+#[path = "./2683.neighboring-bitwise-xor.rs"]
+pub mod p2683;
 pub mod p3203_find_minimum_diameter_after_mergin_two_trees;
 pub mod p46_permutations;
 #[path = "./494.target-sum.rs"]
@@ -17,5 +21,3 @@ pub mod p740_delete_and_earn;
 pub mod p89_gray_code;
 #[path = "./938.range-sum-of-bst.rs"]
 pub mod p938;
-#[path = "./2425.bitwise-xor-of-all-pairings.rs"]
-pub mod p2425;
