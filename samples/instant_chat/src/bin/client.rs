@@ -20,6 +20,7 @@ use tui::{
     layout::{Constraint, Direction, Layout},
     widgets::{Block, Borders, List, ListItem, Paragraph},
 };
+use unicode_width::UnicodeWidthStr;
 
 use instant_chat::stub::{ClientMessage, Type, instant_chat_client::InstantChatClient};
 
@@ -76,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
     metadata.insert("chatroom", MetadataValue::try_from(&args.chatroom)?);
     let mut response_stream = client.chat(chat_request).await?.into_inner();
 
-    let (input_tx, mut input_rx) = mpsc::channel::<String>(32);
+    let (ui_tx, mut ui_rx) = mpsc::channel::<UiEvent>(32);
     let quit_token = CancellationToken::new();
 
     // 输入任务
@@ -85,23 +86,27 @@ async fn main() -> anyhow::Result<()> {
         task::spawn(async move {
             loop {
                 if event::poll(Duration::from_millis(100)).unwrap() {
-                    if let Event::Key(key) = event::read().unwrap() {
-                        match key.code {
+                    match event::read().unwrap() {
+                        Event::Key(key) => match key.code {
                             KeyCode::Enter => {
-                                input_tx.send("<ENTER>".into()).await.ok();
+                                ui_tx.send(UiEvent::Enter).await.ok();
                             }
                             KeyCode::Char(c) => {
-                                input_tx.send(c.to_string()).await.ok();
+                                ui_tx.send(UiEvent::Char(c)).await.ok();
                             }
                             KeyCode::Backspace => {
-                                input_tx.send("<BACKSPACE>".into()).await.ok();
+                                ui_tx.send(UiEvent::Backspace).await.ok();
                             }
                             KeyCode::Esc => {
                                 quit_token.cancel();
                                 break;
                             }
                             _ => {}
+                        },
+                        Event::Resize(_, _) => {
+                            ui_tx.send(UiEvent::Resize).await.ok();
                         }
+                        _ => {}
                     }
                 }
                 if quit_token.is_cancelled() {
@@ -130,9 +135,9 @@ async fn main() -> anyhow::Result<()> {
                     Err(status) => messages.push(format!("(Server): {}", status)),
                 };
             },
-            Some(input) = input_rx.recv() => {
-                match input.as_str() {
-                    "<ENTER>" => {
+            Some(ui_event) = ui_rx.recv() => {
+                match ui_event {
+                    UiEvent::Enter => {
                         if !input_buffer.trim().is_empty() {
                             messages.push(format!("You: {}", input_buffer));
                             let chat_request = ClientMessage {
@@ -143,9 +148,11 @@ async fn main() -> anyhow::Result<()> {
                             to_server_tx.send(chat_request).await.ok();
                             input_buffer.clear();
                         }
-                    }
-                    "<BACKSPACE>" => { input_buffer.pop(); }
-                    _ => input_buffer.push_str(&input),
+                    },
+                    UiEvent::Backspace => { input_buffer.pop(); },
+                    // leave it to redraw
+                    UiEvent::Resize => { },
+                    UiEvent::Char(c) => input_buffer.push(c),
                 }
             },
             _ = quit_token.cancelled() => {
@@ -163,6 +170,13 @@ async fn main() -> anyhow::Result<()> {
 pub struct Ui {
     chatroom: String,
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
+}
+
+pub enum UiEvent {
+    Enter,
+    Backspace,
+    Resize,
+    Char(char),
 }
 
 impl Ui {
@@ -212,7 +226,10 @@ impl Ui {
             Paragraph::new(input).block(Block::default().borders(Borders::ALL).title("Input"));
         f.render_widget(input_box, chunks[1]);
 
-        f.set_cursor(chunks[1].x + input.len() as u16 + 1, chunks[1].y + 1);
+        f.set_cursor(
+            chunks[1].x + UnicodeWidthStr::width(input) as u16 + 1,
+            chunks[1].y + 1,
+        );
     }
 
     pub fn cleanup(&mut self) -> anyhow::Result<()> {
