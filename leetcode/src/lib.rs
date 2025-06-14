@@ -17,3 +17,5 @@ pub mod p740_delete_and_earn;
 pub mod p89_gray_code;
 #[path = "./938.range-sum-of-bst.rs"]
 pub mod p938;
+#[path = "./2425.bitwise-xor-of-all-pairings.rs"]
+pub mod p2425;
