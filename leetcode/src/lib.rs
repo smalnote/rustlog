@@ -1,5 +1,7 @@
 #[path = "./1014.best-sightseeing-pair.rs"]
 pub mod p1014_best_sightseeing_pair;
+#[path = "./1432.max-difference-from-changing-an-number.rs"]
+pub mod p1432;
 pub mod p1456_max_vowels;
 #[path = "./24.swap-nodes-in-pairs.rs"]
 pub mod p23;
