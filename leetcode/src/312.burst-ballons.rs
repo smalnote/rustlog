@@ -13,10 +13,7 @@ pub struct Solution;
 impl Solution {
     pub fn max_coins(nums: Vec<i32>) -> i32 {
         let n = nums.len();
-        let mut dp = Vec::with_capacity(n);
-        for _ in 0..n {
-            dp.push(vec![0; n]);
-        }
+        let mut dp = vec![vec![0; n]; n];
         for i in (0..n).rev() {
             for j in i..n {
                 let mut max = 0;
