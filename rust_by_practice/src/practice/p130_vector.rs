@@ -23,6 +23,19 @@ mod tests {
         }
 
         assert_eq!(v, v1);
+
+        let mut vector_of_vector = vec![vec![1, 2, 3]; 3];
+        for (i, vector) in vector_of_vector.iter_mut().enumerate() {
+            for (j, num) in vector.iter_mut().enumerate() {
+                *num = i * 3 + j;
+            }
+        }
+        // every vector in vector_of_vector is a new instance
+        for (i, vector) in vector_of_vector.into_iter().enumerate() {
+            for (j, num) in vector.into_iter().enumerate() {
+                assert_eq!(num, i * 3 + j);
+            }
+        }
     }
 
     // vector, extend with other vectors
