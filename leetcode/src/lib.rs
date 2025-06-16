@@ -18,6 +18,8 @@ pub mod p312;
 pub mod p3203_find_minimum_diameter_after_mergin_two_trees;
 #[path = "./329.longest-increasing-path-in-a-matrix.rs"]
 pub mod p329;
+#[path = "./337.house-robber-iii.rs"]
+pub mod p337;
 pub mod p46_permutations;
 #[path = "./494.target-sum.rs"]
 pub mod p494_target_sum;
