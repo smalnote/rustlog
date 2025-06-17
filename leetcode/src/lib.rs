@@ -24,6 +24,8 @@ pub mod p337;
 pub mod p338;
 #[path = "./343.integer-break.rs"]
 pub mod p343;
+#[path = "./368.largest-divisible-subset.rs"]
+pub mod p368;
 pub mod p46_permutations;
 #[path = "./494.target-sum.rs"]
 pub mod p494_target_sum;
