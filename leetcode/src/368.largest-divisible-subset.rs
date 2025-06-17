@@ -17,8 +17,15 @@ impl Solution {
         let mut dp = vec![(0, 0); nums.len()];
         let mut max = (1, 0); // 记录当前最大子集大小以及结束位置
         for (i, num) in nums.iter().enumerate() {
-            dp[i] = (1, i); // 以 nums[i] 结尾,长度为 1,前一个数下标为自身,表示没有前一个
-            for j in (0..i).rev() {
+            // 以 nums[i] 结尾,长度为 1,前一个数下标为自身,表示没有前一个
+            dp[i] = (1, i);
+            // num 最大的因数除了自身就是 num/2
+            // 在 nums 0..i-1 中找第一个>= num/2 的下标,从这个下标开始往回搜索
+            // 注意,当 == num/2 时,下标加1,因为后面用 r 时 (0..r) 不包含 r
+            let r = (nums[..i])
+                .binary_search(&(num / 2))
+                .map_or_else(|i| i, |i| i + 1);
+            for j in (0..r).rev() {
                 if *num % nums[j] == 0 && dp[i].0 < dp[j].0 + 1 {
                     dp[i] = (dp[j].0 + 1, j)
                 }
