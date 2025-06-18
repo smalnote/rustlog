@@ -24,14 +24,8 @@ impl Solution {
         while lo < hi {
             let mid = (lo + hi) / 2;
             if nums[mid] > nums[hi] {
-                if lo == mid {
-                    return mid;
-                }
                 lo = mid;
             } else if nums[mid] < nums[lo] {
-                if hi == mid {
-                    return mid;
-                }
                 hi = mid;
             } else {
                 for k in 1.. {
@@ -50,6 +44,9 @@ impl Solution {
                     }
                 }
             }
+            if lo + 1 == hi {
+                break;
+            }
         }
         lo
     }
@@ -60,6 +57,7 @@ mod test {
     use super::Solution;
     #[test]
     fn test_example() {
+        assert!(Solution::search(vec![2, 5, 6, 0, 0, 1, 2], 0));
         assert!(Solution::search(
             vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1],
             2
@@ -67,7 +65,6 @@ mod test {
         assert!(!Solution::search(vec![1], 0));
         assert!(!Solution::search(vec![1, 1], 0));
         assert!(Solution::search(vec![1, 1], 1));
-        assert!(Solution::search(vec![2, 5, 6, 0, 0, 1, 2], 0));
         assert!(!Solution::search(vec![2, 5, 6, 0, 0, 1, 2], 3));
         assert!(!Solution::search(vec![2, 2, 2, 2, 2, 2, 1, 2, 2], 3));
     }
