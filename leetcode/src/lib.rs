@@ -7,6 +7,8 @@ pub mod p1456_max_vowels;
 pub mod p153;
 #[path = "./154.find-minimum-in-rotated-sorted-array-array-ii.rs"]
 pub mod p154;
+#[path = "./162.find-peak-element.rs"]
+pub mod p162;
 #[path = "./2016.maximum-difference-between-increasing-elements.rs"]
 pub mod p2016;
 #[path = "./24.swap-nodes-in-pairs.rs"]
