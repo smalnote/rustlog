@@ -38,6 +38,8 @@ pub mod p515_find_largest_value_in_each_tree_row;
 pub mod p74;
 #[path = "./740.delete-and-earn.rs"]
 pub mod p740_delete_and_earn;
+#[path = "./81.search-in-rotated-sorted-array-ii.rs"]
+pub mod p81;
 pub mod p89_gray_code;
 #[path = "./938.range-sum-of-bst.rs"]
 pub mod p938;
