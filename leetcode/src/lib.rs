@@ -34,6 +34,8 @@ pub mod p494_target_sum;
 #[path = "./50.pow.rs"]
 pub mod p50;
 pub mod p515_find_largest_value_in_each_tree_row;
+#[path = "./74.search-a-2d-matrix.rs"]
+pub mod p74;
 #[path = "./740.delete-and-earn.rs"]
 pub mod p740_delete_and_earn;
 pub mod p89_gray_code;
