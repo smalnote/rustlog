@@ -19,14 +19,8 @@ impl Solution {
         while lo < hi {
             let mid = (lo + hi) / 2;
             if nums[mid] > nums[hi] {
-                if lo == mid {
-                    return mid;
-                }
                 lo = mid;
             } else if nums[mid] < nums[lo] {
-                if hi == mid {
-                    return mid;
-                }
                 hi = mid;
             } else {
                 for k in 1.. {
@@ -44,6 +38,9 @@ impl Solution {
                         return nums.len() - 1;
                     }
                 }
+            }
+            if lo + 1 == hi {
+                break;
             }
         }
         lo
