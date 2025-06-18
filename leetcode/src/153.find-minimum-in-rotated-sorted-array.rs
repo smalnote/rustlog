@@ -6,23 +6,47 @@ pub struct Solution;
 // 二分查找, 当 nums[mid] < nums[lo], 分割点在 lo ~ mid
 // 当 nums[mid] > nums[hi], 分割点在 mid ~ hi
 // 分割点 k 有 nums[k] > nums[k+1], 则 nums[k+1] 是开始位置也就是最小的
+// 增加难度: 数组可能有重复
+// 相等时从 mid 往两边线性搜索
 impl Solution {
     pub fn find_min(nums: Vec<i32>) -> i32 {
-        if nums.first().unwrap() <= nums.last().unwrap() {
-            return *nums.first().unwrap();
-        }
+        let k = Solution::find_break_point(&nums);
+        nums[(k + 1) % nums.len()]
+    }
+
+    fn find_break_point(nums: &[i32]) -> usize {
         let (mut lo, mut hi) = (0, nums.len() - 1);
-        while hi > 0 && lo < hi - 1 {
+        while lo < hi {
             let mid = (lo + hi) / 2;
-            if nums[mid] < nums[lo] {
-                hi = mid;
-            } else if nums[mid] > nums[hi] {
+            if nums[mid] > nums[hi] {
+                if lo == mid {
+                    return mid;
+                }
                 lo = mid;
+            } else if nums[mid] < nums[lo] {
+                if hi == mid {
+                    return mid;
+                }
+                hi = mid;
             } else {
-                panic!("invalid nums");
+                for k in 1.. {
+                    if k <= mid && mid - k >= lo && nums[mid - k] > nums[mid - k + 1] {
+                        return mid - k;
+                    }
+
+                    if mid + k <= hi && nums[mid + k] < nums[mid + k - 1] {
+                        return mid + k - 1;
+                    }
+
+                    // k out of range [lo, hi]
+                    // [a, a, a, a, a] -> [a, a, a, a, a]
+                    if (mid < k || mid - k < lo) && mid + k > hi {
+                        return nums.len() - 1;
+                    }
+                }
             }
         }
-        nums[lo + 1]
+        lo
     }
 }
 
@@ -31,7 +55,11 @@ mod test {
     use super::Solution;
     #[test]
     fn test_example() {
+        assert_eq!(Solution::find_min(vec![1, 3]), 1);
+        assert_eq!(Solution::find_min(vec![3, 1]), 1);
         assert_eq!(Solution::find_min(vec![3, 4, 5, 1, 2]), 1);
         assert_eq!(Solution::find_min(vec![3, 4, 5]), 3);
+        assert_eq!(Solution::find_min(vec![2, 2, 2, 0, 1]), 0);
+        assert_eq!(Solution::find_min(vec![2, 2, 2, 0, 1, 2]), 0);
     }
 }

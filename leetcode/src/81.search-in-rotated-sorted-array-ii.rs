@@ -19,14 +19,19 @@ impl Solution {
         (target >= *nums.first().unwrap() && nums[0..k + 1].binary_search(&target).is_ok())
             || (target <= *nums.last().unwrap() && nums[k + 1..].binary_search(&target).is_ok())
     }
-
     fn find_break_point(nums: &[i32]) -> usize {
         let (mut lo, mut hi) = (0, nums.len() - 1);
-        while hi > 0 && lo < hi - 1 {
+        while lo < hi {
             let mid = (lo + hi) / 2;
             if nums[mid] > nums[hi] {
+                if lo == mid {
+                    return mid;
+                }
                 lo = mid;
             } else if nums[mid] < nums[lo] {
+                if hi == mid {
+                    return mid;
+                }
                 hi = mid;
             } else {
                 for k in 1.. {
