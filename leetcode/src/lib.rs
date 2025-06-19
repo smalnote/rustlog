@@ -9,6 +9,8 @@ pub mod p153;
 pub mod p154;
 #[path = "./162.find-peak-element.rs"]
 pub mod p162;
+#[path = "./167.two-sum-ii-input-array-is-sorted.rs"]
+pub mod p167;
 #[path = "./2016.maximum-difference-between-increasing-elements.rs"]
 pub mod p2016;
 #[path = "./209.minimum-size-subarry-sum.rs"]
