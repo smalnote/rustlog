@@ -27,6 +27,8 @@ pub mod p2425;
 pub mod p2616;
 #[path = "./2683.neighboring-bitwise-xor.rs"]
 pub mod p2683;
+#[path = "./275.h-index-ii.rs"]
+pub mod p275;
 #[path = "./312.burst-ballons.rs"]
 pub mod p312;
 pub mod p3203_find_minimum_diameter_after_mergin_two_trees;
