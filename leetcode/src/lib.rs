@@ -11,6 +11,8 @@ pub mod p154;
 pub mod p162;
 #[path = "./2016.maximum-difference-between-increasing-elements.rs"]
 pub mod p2016;
+#[path = "./209.minimum-size-subarry-sum.rs"]
+pub mod p209;
 #[path = "./24.swap-nodes-in-pairs.rs"]
 pub mod p23;
 #[path = "./2425.bitwise-xor-of-all-pairings.rs"]
