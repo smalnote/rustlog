@@ -81,7 +81,8 @@ impl Solution {
     // 我们查询 BIT 涉及的值只可能是 prefix_sums[i] - upper, prefix_sums[i] - lower
     // 而更新的值只涉及到 prefix_sums[i]
     // 即所有可能的值为 prefix_sums[i] - upper, prefix_sums[i], prefix_sums[i] - lower, 0 <= i < n,
-    // 最多 3 * n 个, 我们把这些值映射到 [0, 3*n -1] 的空间中,
+    // 注意需要加上 0-upper, 0, 0-lower, 作为第一个起点
+    // 最多 3 * (n+1) 个, 我们把这些值映射到 [1, 3*(n+1)] 的空间中,
     // 用在映射空间中的值的下标代表这些值对 BIT 进行操作
     // 因些需要对值进行排序
     pub fn count_range_sum(nums: Vec<i32>, lower: i32, upper: i32) -> i32 {
