@@ -29,6 +29,8 @@ pub mod p2616;
 pub mod p2683;
 #[path = "./275.h-index-ii.rs"]
 pub mod p275;
+#[path = "./287.find-the-duplicate-number.rs"]
+pub mod p287;
 #[path = "./312.burst-ballons.rs"]
 pub mod p312;
 #[path = "./315.count-of-smaller-numbers-after-self.rs"]
