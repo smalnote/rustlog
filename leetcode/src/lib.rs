@@ -36,6 +36,8 @@ pub mod p312;
 #[path = "./315.count-of-smaller-numbers-after-self.rs"]
 pub mod p315;
 pub mod p3203_find_minimum_diameter_after_mergin_two_trees;
+#[path = "./327.count-of-range-sum.rs"]
+pub mod p327;
 #[path = "./329.longest-increasing-path-in-a-matrix.rs"]
 pub mod p329;
 #[path = "./337.house-robber-iii.rs"]
