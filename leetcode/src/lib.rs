@@ -46,6 +46,10 @@ pub mod p337;
 pub mod p338;
 #[path = "./343.integer-break.rs"]
 pub mod p343;
+#[path = "./349.intersection-of-two-arrays.rs"]
+pub mod p349;
+#[path = "./350.intersection-of-two-arrays-ii.rs"]
+pub mod p350;
 #[path = "./368.largest-divisible-subset.rs"]
 pub mod p368;
 #[path = "./375.guess-number-higher-or-lower-ii.rs"]
