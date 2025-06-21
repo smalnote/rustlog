@@ -50,6 +50,8 @@ pub mod p343;
 pub mod p349;
 #[path = "./350.intersection-of-two-arrays-ii.rs"]
 pub mod p350;
+#[path = "./352.data-stream-as-disjoint-intervals.rs"]
+pub mod p352;
 #[path = "./368.largest-divisible-subset.rs"]
 pub mod p368;
 #[path = "./375.guess-number-higher-or-lower-ii.rs"]
