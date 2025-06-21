@@ -56,6 +56,8 @@ pub mod p352;
 pub mod p368;
 #[path = "./375.guess-number-higher-or-lower-ii.rs"]
 pub mod p375;
+#[path = "./436.find-right-interval.rs"]
+pub mod p436;
 pub mod p46_permutations;
 #[path = "./494.target-sum.rs"]
 pub mod p494_target_sum;
