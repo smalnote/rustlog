@@ -31,6 +31,8 @@ pub mod p2683;
 pub mod p275;
 #[path = "./287.find-the-duplicate-number.rs"]
 pub mod p287;
+#[path = "./3085.minimum-deletions-to-make-string-k-special.rs"]
+pub mod p3085;
 #[path = "./312.burst-ballons.rs"]
 pub mod p312;
 #[path = "./315.count-of-smaller-numbers-after-self.rs"]
