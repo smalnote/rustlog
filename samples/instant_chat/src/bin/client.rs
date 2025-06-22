@@ -14,6 +14,8 @@ use tonic::{
     metadata::MetadataValue,
     transport::{Certificate, Channel, ClientTlsConfig, Uri},
 };
+use tracing::debug;
+use tracing_subscriber::EnvFilter;
 use tui::{
     Frame, Terminal,
     backend::CrosstermBackend,
@@ -40,6 +42,22 @@ struct Args {
 
     #[arg(long, help = "TLS CA file")]
     tls_ca: String,
+
+    #[arg(
+        long,
+        env = "RUST_LOG",
+        default_value = "error",
+        help = "Log level, e.g. info, debug, error, instant_chat=trace"
+    )]
+    log_level: String,
+
+    #[arg(
+        long,
+        env = "LOG_JSON",
+        help = "Log format in JSON",
+        default_value = "false"
+    )]
+    log_json: bool,
 }
 /// 用户名只能是字母、数字、下划线，3~32 个字符
 fn validate_name(s: &str) -> Result<String, String> {
@@ -55,6 +73,20 @@ fn validate_name(s: &str) -> Result<String, String> {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let addr: Uri = args.addr.parse()?;
+    let env_filter = EnvFilter::new(args.log_level);
+
+    if args.log_json {
+        tracing_subscriber::fmt()
+            .json()
+            .with_env_filter(env_filter)
+            .with_target(true)
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(env_filter)
+            .with_target(true)
+            .init();
+    }
 
     let domain = addr
         .host()
@@ -75,7 +107,9 @@ async fn main() -> anyhow::Result<()> {
     let metadata = chat_request.metadata_mut();
     metadata.insert("username", MetadataValue::try_from(&args.username)?);
     metadata.insert("chatroom", MetadataValue::try_from(&args.chatroom)?);
+    debug!(args.username, args.chatroom, "starting chat");
     let mut response_stream = client.chat(chat_request).await?.into_inner();
+    debug!(args.username, args.chatroom, "chat started");
 
     let (ui_tx, mut ui_rx) = mpsc::channel::<UiEvent>(32);
     let quit_token = CancellationToken::new();
