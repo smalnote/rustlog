@@ -1,6 +1,6 @@
-use std::collections::HashSet;
-
 pub struct Solution;
+
+use std::collections::HashSet;
 
 // 给定一个有向图，用二维数组表示 graph[i], 每个 graph[i] 是节点 i 的下一个节点列表，
 // 如果一个节点没有一下个节点，则这个节点是最终节点，如果一个节点作为起点的所有可能的
@@ -11,11 +11,10 @@ impl Solution {
     pub fn eventual_safe_nodes(graph: Vec<Vec<i32>>) -> Vec<i32> {
         let (mut safe, mut not_safe) = (HashSet::new(), HashSet::new());
         let mut terminals = Vec::new();
-        for start in 0..graph.len() {
-            let mut chain = HashSet::new();
-            chain.insert(start as i32);
+        let mut chain = HashSet::new();
+        for start in 0..graph.len() as i32 {
             if Self::dfs(&graph, start, &mut safe, &mut not_safe, &mut chain) {
-                terminals.push(start as i32);
+                terminals.push(start);
             }
         }
         terminals
@@ -23,12 +22,12 @@ impl Solution {
 
     fn dfs(
         graph: &Vec<Vec<i32>>,
-        start: usize,
-        safe: &mut HashSet<usize>,
-        not_safe: &mut HashSet<usize>,
+        start: i32,
+        safe: &mut HashSet<i32>,
+        not_safe: &mut HashSet<i32>,
         chain: &mut HashSet<i32>,
     ) -> bool {
-        if graph[start].is_empty() {
+        if graph[start as usize].is_empty() {
             safe.insert(start);
             true
         } else if safe.contains(&start) {
@@ -36,17 +35,17 @@ impl Solution {
         } else if not_safe.contains(&start) {
             false
         } else {
-            for &next in graph[start].iter() {
+            chain.insert(start);
+            for &next in graph[start as usize].iter() {
                 if chain.contains(&next) {
                     return false;
                 }
-                chain.insert(next);
-                if !Self::dfs(graph, next as usize, safe, not_safe, chain) {
+                if !Self::dfs(graph, next, safe, not_safe, chain) {
                     not_safe.insert(start);
-                    chain.remove(&next);
+                    chain.remove(&start);
                     return false;
                 }
-                chain.remove(&next);
+                chain.remove(&start);
             }
             safe.insert(start);
             true
