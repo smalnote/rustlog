@@ -52,6 +52,8 @@ pub mod p349;
 pub mod p350;
 #[path = "./352.data-stream-as-disjoint-intervals.rs"]
 pub mod p352;
+#[path = "./354.russian-doll-envelopes.rs"]
+pub mod p354;
 #[path = "./368.largest-divisible-subset.rs"]
 pub mod p368;
 #[path = "./375.guess-number-higher-or-lower-ii.rs"]
