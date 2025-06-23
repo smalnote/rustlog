@@ -76,6 +76,8 @@ pub mod p802;
 pub mod p805;
 #[path = "./81.search-in-rotated-sorted-array-ii.rs"]
 pub mod p81;
+#[path = "./813.largest-sum-of-averages.rs"]
+pub mod p813;
 pub mod p89_gray_code;
 #[path = "./938.range-sum-of-bst.rs"]
 pub mod p938;
