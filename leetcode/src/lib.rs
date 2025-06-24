@@ -4,6 +4,8 @@ pub mod p1014_best_sightseeing_pair;
 pub mod p109;
 #[path = "./1146.snapshot-array.rs"]
 pub mod p1146;
+#[path = "./129.sum-root-leaf-nums.rs"]
+pub mod p129;
 #[path = "./1432.max-difference-from-changing-an-number.rs"]
 pub mod p1432;
 pub mod p1456_max_vowels;
