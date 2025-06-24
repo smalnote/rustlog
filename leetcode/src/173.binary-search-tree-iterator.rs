@@ -35,18 +35,15 @@ pub struct BSTIterator {
  */
 impl BSTIterator {
     pub fn new(root: Option<Rc<RefCell<TreeNode>>>) -> Self {
-        Self {
-            stack: if root.is_some() {
-                let mut left = root;
-                let mut stack = Vec::new();
-                while let Some(node) = left {
-                    left = node.borrow().left.clone();
-                    stack.push(node);
-                }
-                stack
-            } else {
-                vec![]
-            },
+        let mut iter = Self { stack: vec![] };
+        iter.push_left(root);
+        iter
+    }
+
+    fn push_left(&mut self, mut node: Option<Rc<RefCell<TreeNode>>>) {
+        while let Some(n) = node {
+            node = n.borrow().left.clone();
+            self.stack.push(n);
         }
     }
 
@@ -55,13 +52,9 @@ impl BSTIterator {
         let curr = self.stack.pop().unwrap();
         let val = curr.borrow().val;
 
-        if let Some(right) = curr.borrow().right.clone() {
-            let mut left = right.borrow().left.clone();
-            self.stack.push(right);
-            while let Some(node) = left {
-                left = node.borrow().left.clone();
-                self.stack.push(node);
-            }
+        let right = curr.borrow().right.clone();
+        if right.is_some() {
+            self.push_left(right);
         }
         val
     }
