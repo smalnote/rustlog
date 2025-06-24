@@ -19,6 +19,8 @@ pub mod p20;
 pub mod p2016;
 #[path = "./209.minimum-size-subarry-sum.rs"]
 pub mod p209;
+#[path = "./2200.find-all-k-distant-indices-in-an-array.rs"]
+pub mod p2200;
 #[path = "./24.swap-nodes-in-pairs.rs"]
 pub mod p23;
 #[path = "./240.search-a-2d-matrix-ii.rs"]
@@ -60,6 +62,8 @@ pub mod p354;
 pub mod p368;
 #[path = "./375.guess-number-higher-or-lower-ii.rs"]
 pub mod p375;
+#[path = "./400.nth-digit.rs"]
+pub mod p400;
 #[path = "./436.find-right-interval.rs"]
 pub mod p436;
 pub mod p46_permutations;
