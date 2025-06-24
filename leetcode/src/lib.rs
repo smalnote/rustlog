@@ -17,6 +17,8 @@ pub mod p154;
 pub mod p162;
 #[path = "./167.two-sum-ii-input-array-is-sorted.rs"]
 pub mod p167;
+#[path = "./173.binary-search-tree-iterator.rs"]
+pub mod p173;
 #[path = "./20.valid-parentheses.rs"]
 pub mod p20;
 #[path = "./2016.maximum-difference-between-increasing-elements.rs"]
