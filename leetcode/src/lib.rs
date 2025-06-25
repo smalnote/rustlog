@@ -31,6 +31,8 @@ pub mod p209;
 pub mod p2200;
 #[path = "./24.swap-nodes-in-pairs.rs"]
 pub mod p23;
+#[path = "./230.kth-smallest-element-in-a-bst.rs"]
+pub mod p230;
 #[path = "./240.search-a-2d-matrix-ii.rs"]
 pub mod p240;
 #[path = "./2425.bitwise-xor-of-all-pairings.rs"]
