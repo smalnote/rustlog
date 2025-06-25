@@ -33,6 +33,8 @@ pub mod p2200;
 pub mod p23;
 #[path = "./230.kth-smallest-element-in-a-bst.rs"]
 pub mod p230;
+#[path = "./2368.reachable-nodes-with-restrictions.rs"]
+pub mod p2368;
 #[path = "./240.search-a-2d-matrix-ii.rs"]
 pub mod p240;
 #[path = "./2425.bitwise-xor-of-all-pairings.rs"]
