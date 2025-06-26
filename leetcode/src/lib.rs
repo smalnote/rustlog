@@ -37,6 +37,8 @@ pub mod p230;
 pub mod p2368;
 #[path = "./240.search-a-2d-matrix-ii.rs"]
 pub mod p240;
+#[path = "./2415.reverse-odd-leves-of-binary-tree.rs"]
+pub mod p2415;
 #[path = "./2425.bitwise-xor-of-all-pairings.rs"]
 pub mod p2425;
 #[path = "./2616.minimize-the-maxmum-difference-of-pairs.rs"]
