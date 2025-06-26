@@ -94,7 +94,8 @@ impl Solution {
     }
 }
 
-mod test {
+#[cfg(test)]
+mod tests {
     use super::Solution;
     #[test]
     fn test_example() {
