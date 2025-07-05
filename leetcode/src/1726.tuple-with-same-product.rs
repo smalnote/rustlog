@@ -4,24 +4,21 @@ use std::collections::HashMap;
 // 给定一个含有不同整数的数组，计算满足 a * b = c * d 且 a != b != c != d 的元组
 // 的个数。
 //
-// 排序数组，假设满足条件的元组下标为 a/i, b/j, c/p, d/q, a < c < d < b
-// i < p < q < j
+// 遍历二元组 (a, b)，其乘积 product，若 map 中有相同的 product, 则 += 8 * product_count
+// 再把 product 放到 map 中, 检查后再放，避免重复
 impl Solution {
     pub fn tuple_same_product(nums: Vec<i32>) -> i32 {
-        let mut nums = nums.clone();
-        nums.sort();
-        let m: HashMap<i32, usize> = nums.iter().enumerate().map(|(i, &v)| (v, i)).collect();
+        let mut m = HashMap::new();
         let mut c = 0;
-        for i in 0..=nums.len() - 3 {
-            for j in ((i + 2)..nums.len()).rev() {
+        for i in 0..nums.len() {
+            for j in i + 1..nums.len() {
                 let product = nums[i] * nums[j];
-                ((i + 1)..=(j - 2)).for_each(|p| {
-                    if product % nums[p] == 0
-                        && m.get(&(product / nums[p])).is_some_and(|&q| p < q && q < j)
-                    {
-                        c += 8;
-                    }
-                });
+                if let Some(product_count) = m.get(&product) {
+                    c += 8 * product_count;
+                }
+                m.entry(product)
+                    .and_modify(|product_count| *product_count += 1)
+                    .or_insert(1);
             }
         }
         c
