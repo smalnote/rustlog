@@ -75,7 +75,7 @@ impl InstantChat for ValkeyChatService {
             .repository
             .subscribe::<Result<ServerMessage, Status>>(&meta.chatroom, chat_token.clone())
             .await
-            .map_err(|err| tonic::Status::internal(format!("failed to subscribe: {:?}", err)))?;
+            .map_err(|err| tonic::Status::internal(format!("failed to subscribe: {err:?}")))?;
         let output_stream = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
 
         let mut inbound = request.into_inner();
@@ -146,7 +146,7 @@ impl FromChannelMessage for Result<ServerMessage, Status> {
                 at: None,
             })
             .map_err(|err| {
-                Status::data_loss(format!("extract message from repository failed: {}", err))
+                Status::data_loss(format!("extract message from repository failed: {err}"))
             })
     }
 }
