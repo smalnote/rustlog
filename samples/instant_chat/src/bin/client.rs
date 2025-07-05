@@ -20,7 +20,7 @@ use tui::{
     Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -150,7 +150,7 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    let mut ui = Ui::new(&args.chatroom)?;
+    let mut ui = Ui::new(&args.username, &args.chatroom)?;
     let mut messages = vec![];
     let mut input_buffer = String::new();
     ui.draw(&messages, &input_buffer)?;
@@ -202,8 +202,10 @@ async fn main() -> anyhow::Result<()> {
 }
 
 pub struct Ui {
+    username: String,
     chatroom: String,
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
+    list_state: ListState,
 }
 
 pub enum UiEvent {
@@ -214,7 +216,7 @@ pub enum UiEvent {
 }
 
 impl Ui {
-    pub fn new(chatroom: &str) -> anyhow::Result<Self> {
+    pub fn new(username: &str, chatroom: &str) -> anyhow::Result<Self> {
         // 启动 TUI
         enable_raw_mode()?;
         let mut stdout = io::stdout();
@@ -223,23 +225,36 @@ impl Ui {
         let mut terminal = Terminal::new(backend)?;
         terminal.clear()?;
         Ok(Self {
+            username: username.into(),
             chatroom: chatroom.into(),
             terminal,
+            list_state: Default::default(),
         })
     }
 
     pub fn draw(&mut self, messages: &[String], input: &str) -> anyhow::Result<()> {
+        self.list_state
+            .select(Some(messages.len().saturating_sub(1)));
         self.terminal.draw(|f| {
-            Self::render_ui(f, &self.chatroom, messages, input);
+            Self::render_ui(
+                f,
+                &self.username,
+                &self.chatroom,
+                messages,
+                input,
+                &mut self.list_state,
+            );
         })?;
         Ok(())
     }
 
     fn render_ui<B: tui::backend::Backend>(
         f: &mut Frame<B>,
+        username: &str,
         chatroom: &str,
         messages: &[String],
         input: &str,
+        list_state: &mut ListState,
     ) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -252,9 +267,9 @@ impl Ui {
         let message_list = List::new(items).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(format!("Chatroom: {chatroom}")),
+                .title(format!("{username}@{chatroom}")),
         );
-        f.render_widget(message_list, chunks[0]);
+        f.render_stateful_widget(message_list, chunks[0], list_state);
 
         let input_box =
             Paragraph::new(input).block(Block::default().borders(Borders::ALL).title("Input"));
