@@ -17,6 +17,8 @@ pub mod p154;
 pub mod p162;
 #[path = "./167.two-sum-ii-input-array-is-sorted.rs"]
 pub mod p167;
+#[path = "./1726.tuple-with-same-product.rs"]
+pub mod p1726;
 #[path = "./173.binary-search-tree-iterator.rs"]
 pub mod p173;
 #[path = "./199.binary-tree-right-side-view.rs"]
