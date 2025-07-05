@@ -68,6 +68,8 @@ pub mod p337;
 pub mod p338;
 #[path = "./343.integer-break.rs"]
 pub mod p343;
+#[path = "./347.top-k-frequent-elements.rs"]
+pub mod p347;
 #[path = "./349.intersection-of-two-arrays.rs"]
 pub mod p349;
 #[path = "./350.intersection-of-two-arrays-ii.rs"]
