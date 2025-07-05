@@ -166,14 +166,14 @@ async fn main() -> anyhow::Result<()> {
                             messages.push(format!("{}: {}", reply.username, reply.content));
                         }
                     },
-                    Err(status) => messages.push(format!("(Server): {}", status)),
+                    Err(status) => messages.push(format!("(Server): {status}")),
                 };
             },
             Some(ui_event) = ui_rx.recv() => {
                 match ui_event {
                     UiEvent::Enter => {
                         if !input_buffer.trim().is_empty() {
-                            messages.push(format!("You: {}", input_buffer));
+                            messages.push(format!("You: {input_buffer}"));
                             let chat_request = ClientMessage {
                                 r#type: Type::Message.into(),
                                 content: input_buffer.clone(),
@@ -252,7 +252,7 @@ impl Ui {
         let message_list = List::new(items).block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(format!("Chatroom: {}", chatroom)),
+                .title(format!("Chatroom: {chatroom}")),
         );
         f.render_widget(message_list, chunks[0]);
 
