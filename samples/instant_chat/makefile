@@ -5,9 +5,10 @@ run_server:
 
 username ?= devin
 chatroom ?= public
+addr ?= https://arc.devin.lan:50051
 run_client:
 	cargo run --package instant_chat --bin instant-chat-client -- \
-		--addr https://arc.devin.lan:50051 \
+		--addr $(addr) \
 		--tls-ca="./devin-rootCA.pem" \
 		--username $(username) --chatroom $(chatroom)
 
