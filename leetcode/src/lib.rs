@@ -21,6 +21,8 @@ pub mod p167;
 pub mod p1726;
 #[path = "./173.binary-search-tree-iterator.rs"]
 pub mod p173;
+#[path = "./1865.find-pairs-with-a-certain-sum.rs"]
+pub mod p1865;
 #[path = "./199.binary-tree-right-side-view.rs"]
 pub mod p199;
 #[path = "./20.valid-parentheses.rs"]
