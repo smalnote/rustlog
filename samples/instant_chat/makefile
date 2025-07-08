@@ -10,6 +10,7 @@ run_client:
 	cargo run --package instant_chat --bin instant-chat-client -- \
 		--addr $(addr) \
 		--tls-ca="./devin-rootCA.pem" \
+		--traffic-tag=dev \
 		--username $(username) --chatroom $(chatroom)
 
 grpcurl_list:
