@@ -58,6 +58,14 @@ struct Args {
         default_value = "false"
     )]
     log_json: bool,
+
+    #[arg(
+        long,
+        env = "TRAFFIC_TAG",
+        default_value = "",
+        help = "Traffic tag list passed to server"
+    )]
+    traffic_tag: Vec<String>,
 }
 /// 用户名只能是字母、数字、下划线，3~32 个字符
 fn validate_name(s: &str) -> Result<String, String> {
@@ -107,6 +115,9 @@ async fn main() -> anyhow::Result<()> {
     let metadata = chat_request.metadata_mut();
     metadata.insert("username", MetadataValue::try_from(&args.username)?);
     metadata.insert("chatroom", MetadataValue::try_from(&args.chatroom)?);
+    for tag in args.traffic_tag.iter() {
+        metadata.append("x-traffic-tag", MetadataValue::try_from(tag)?);
+    }
     debug!(args.username, args.chatroom, "starting chat");
     let mut response_stream = client.chat(chat_request).await?.into_inner();
     debug!(args.username, args.chatroom, "chat started");
