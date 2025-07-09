@@ -37,6 +37,8 @@ pub mod p2200;
 pub mod p23;
 #[path = "./230.kth-smallest-element-in-a-bst.rs"]
 pub mod p230;
+#[path = "./2342.max-sum-of-a-pair-with-equal-sum-of-digits.rs"]
+pub mod p2342;
 #[path = "./2368.reachable-nodes-with-restrictions.rs"]
 pub mod p2368;
 #[path = "./240.search-a-2d-matrix-ii.rs"]
