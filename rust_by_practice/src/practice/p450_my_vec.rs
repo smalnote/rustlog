@@ -34,12 +34,12 @@ mod tests {
         // println!("{:?}", *hello.ptr); // use after free
     }
 
-    use std::alloc::{self, Layout, alloc, dealloc};
+    use std::alloc::{self, alloc, dealloc, Layout};
     use std::collections::HashSet;
     use std::fmt::Debug;
     use std::mem::{self, size_of};
     use std::ops::{Deref, DerefMut};
-    use std::ptr::{NonNull, copy, read, write};
+    use std::ptr::{copy, read, write, NonNull};
 
     /// This is a implementation from Rustonomicon:
     /// [Vec](https://doc.rust-lang.org/nomicon/vec/vec.html)
@@ -133,7 +133,7 @@ mod tests {
             elem
         }
 
-        fn drain(&mut self) -> Drain<T> {
+        fn drain(&'_ mut self) -> Drain<'_, T> {
             let iter = unsafe { RawValIter::new(self) };
             // Here Drain only take RawValIter(start, end) from MyVec,
             // What if Drain doesn't consume all elements first,

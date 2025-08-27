@@ -10,12 +10,13 @@ pub fn hello_marco_derive(input: TokenStream) -> TokenStream {
 
 fn impl_hello_marco(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
-    let gen = quote! {
+    // As of edition 2024, `gen` is a reserved keyword
+    let r#gen = quote! {
         impl HelloMarco for #name {
             fn hello_marco() {
                 println!("Hello, Marco! My type name is {}!", stringify!(#name));
             }
         }
     };
-    gen.into()
+    r#gen.into()
 }

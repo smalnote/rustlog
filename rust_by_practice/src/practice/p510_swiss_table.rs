@@ -143,14 +143,14 @@ where
                 }
             }
 
-            if let Some(available_slot) = word.match_empty_or_deleted().lowest_set_bit() {
-                if word.match_empty().any_bit_set() || not_found {
-                    // If there is a empty slot, we stop probing, and use a empty or deleted slot.
-                    // Or we have probed all group and not empty slot found, use the deleted slot.
-                    return Err(InsertSlot {
-                        index: offset + available_slot,
-                    });
-                }
+            if let Some(available_slot) = word.match_empty_or_deleted().lowest_set_bit()
+                && (word.match_empty().any_bit_set() || not_found)
+            {
+                // If there is a empty slot, we stop probing, and use a empty or deleted slot.
+                // Or we have probed all group and not empty slot found, use the deleted slot.
+                return Err(InsertSlot {
+                    index: offset + available_slot,
+                });
             }
 
             // If group is all full or deleted, we should keep probing
@@ -261,7 +261,7 @@ impl<K, V> Drop for SwissTable<K, V> {
 ///
 /// # Contract
 ///
-/// The implementor **must** hash like `K`, if it is hashable.
+/// The implementer **must** hash like `K`, if it is hashable.
 pub trait Equivalent<K: ?Sized> {
     /// Compare self to `key` and return `true` if they are equal.
     fn equivalent(&self, key: &K) -> bool;
