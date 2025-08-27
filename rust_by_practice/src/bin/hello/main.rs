@@ -6,8 +6,8 @@ fn main() {
         a + b
     }
     let greeting: &str = "Hello, world!";
-    let mut rng = rand::thread_rng();
-    let random_number: i32 = rng.gen_range(0..100);
+    let mut rng = rand::rng();
+    let random_number: i32 = rng.random_range(0..100);
     let now = OffsetDateTime::now_local().expect("Failed to get local date time");
     // marcos, generated code by function arguments.
     println!(

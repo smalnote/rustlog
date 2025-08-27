@@ -34,9 +34,9 @@ impl Solution {
                 }
             }
             if mid < hi {
-                return Self::find_range_peak(nums, mid + 1, hi);
+                Self::find_range_peak(nums, mid + 1, hi)
             } else {
-                return None;
+                None
             }
         }
     }
