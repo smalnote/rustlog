@@ -234,4 +234,18 @@ mod tests {
             println!("enum of variant in vector = {:?}", v);
         }
     }
+    // Since Rust 1.86
+    #[test]
+    fn index_multiple_elements_mutable() {
+        let mut numbers = [1, 2, 3, 4, 5];
+        let results = numbers.get_disjoint_mut([1, 3]);
+        assert_eq!(results, Ok([&mut 2, &mut 4]));
+
+        let results = numbers.get_disjoint_mut([0..=1, 3..=4]);
+        println!("{:?}", results);
+
+        let first: &mut [i32] = &mut [1, 2];
+        let second: &mut [i32] = &mut [4, 5];
+        assert_eq!(results, Ok([first, second]));
+    }
 }
