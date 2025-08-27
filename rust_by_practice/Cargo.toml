@@ -52,3 +52,4 @@ hashbrown = "0.15.2"
 siphasher = "1.0.1"
 nix = { version = "0.30", features = ["zerocopy"] }
 libc = "0.2"
+rustc_version = "0.4.1"

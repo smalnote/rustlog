@@ -5,6 +5,8 @@ mod tests {
         ops::{Range, RangeInclusive},
     };
 
+    use rustc_version::{Version, version_meta};
+
     // variable declaration shadowing
     #[test]
     fn variable_declaration_shadowing() {
@@ -324,5 +326,16 @@ mod tests {
     fn test_non_zero_numeric_types() {
         let magic_number = unsafe { NonZeroU16::new_unchecked(42) };
         assert_eq!(magic_number.trailing_zeros(), 1);
+    }
+
+    #[test]
+    fn test_let_chains() {
+        if let Ok(version) = version_meta()
+            && let Version { major, minor, .. } = version.semver
+            && major == 1
+            && minor >= 88
+        {
+            println!("`let_chains` was stabilized in this version")
+        }
     }
 }
