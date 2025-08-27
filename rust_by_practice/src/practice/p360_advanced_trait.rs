@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use core::fmt;
+    use std::sync::Arc;
 
     #[test]
     fn test_trait_with_default_generic_type() {
@@ -94,5 +95,50 @@ mod tests {
         let p = "This is a multiple line";
 
         print!("{}", OutlineString(p));
+    }
+
+    // Since Rust 1.86
+    #[test]
+    fn test_trait_upcasting() {
+        trait Bird: Animal {}
+        trait Animal {}
+
+        fn upcast(b: &dyn Bird) -> &dyn Animal {
+            b
+        }
+
+        struct Sparrow {}
+        impl Animal for Sparrow {}
+        impl Bird for Sparrow {}
+
+        // &dyn Trait -> &dyn SuperTrait
+        let sparrow = Sparrow {};
+        let _: &dyn Animal = upcast(&sparrow);
+
+        // Arc<dyn Trait> -> Arc<dyn SuperTrait>
+        let sparrow = Sparrow {};
+        let _: Arc<dyn Animal> = Arc::new(sparrow);
+
+        let sparrow = Sparrow {};
+        let raw_sparrow: *mut dyn Bird = Box::into_raw(Box::new(sparrow));
+        // *const dyn Trait -> *const dyn SuperTrait
+        let _: *const dyn Animal = raw_sparrow;
+        // *mut dyn Trait -> *mut dyn SuperTrait
+        let _: *mut dyn Animal = raw_sparrow;
+        // cleanup
+        let _ = unsafe { Box::from_raw(raw_sparrow) };
+    }
+
+    #[test]
+    #[allow(dead_code)]
+    fn downcasting_from_std_any_trait() {
+        use std::any::Any;
+        trait Phone: Any {}
+        trait Device {}
+        impl dyn Phone {
+            fn downcast_ref<T>(&'static self) -> Option<&'static T> {
+                (self as &dyn Any).downcast_ref()
+            }
+        }
     }
 }

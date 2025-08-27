@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
 
     // HashMap<&str, i32>
     #[test]
@@ -74,7 +75,7 @@ mod tests {
      *   - int, uint, and all variations thereof
      *   - String and &str (tips: you can have a HashMap keyed by String and call .get() with an &str)
      *
-     * Note: f32 and f64 do not implement Hash, likely because floating-point precesion erros would make
+     * Note: f32 and f64 do not implement Hash, likely because floating-point precesion errors would make
      * using the as hashmap keys horribly error-prone.
      *
      * Note: All collection classes implement Eq and Hash if there contained type also respectively
@@ -231,5 +232,17 @@ mod tests {
         let mut map = HashMap::<u32, i32, BuildXxHash64>::with_hasher(BuildXxHash64::default());
         map.insert(42, 42);
         assert_eq!(map.get(&42), Some(&42));
+    }
+
+    // Since Rust 1.86
+    #[test]
+    fn index_multiple_elements_mutable() {
+        let mut projects = HashMap::from([
+            ("alpha".to_string(), 1),
+            ("beta".to_string(), 2),
+            ("gamma".to_string(), 3),
+        ]);
+        let results = projects.get_disjoint_mut(["alpha", "deta"]);
+        assert_eq!(results, [Some(&mut 1), None]);
     }
 }
