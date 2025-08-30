@@ -1,7 +1,7 @@
 [package]
 name = "hello_marco"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 hello_marco_derive = { path = "../hello_marco_derive", optional = true }

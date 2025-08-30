@@ -386,7 +386,7 @@ struct Drain<'a> {
 }
 
 impl Bucket {
-    fn expired(&mut self, deadline: u128) -> Expired {
+    fn expired(&'_ mut self, deadline: u128) -> Expired<'_> {
         Expired {
             cursor: self.head,
             bucket: self,
@@ -394,7 +394,7 @@ impl Bucket {
         }
     }
 
-    fn drain(&mut self) -> Drain {
+    fn drain(&'_ mut self) -> Drain<'_> {
         Drain {
             cursor: self.head,
             bucket: self,

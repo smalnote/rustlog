@@ -16,6 +16,6 @@ fn main() {
         .file_descriptor_set_path(out_dir.join("instant_chat_descriptor.bin"))
         .out_dir(&out_dir)
         .compile_protos(&[proto_file], &["proto"])
-        .unwrap_or_else(|e| panic!("protobuf compile error: {}", e));
-    println!("cargo:rerun-if-changed={}", proto_file);
+        .unwrap_or_else(|e| panic!("protobuf compile error: {e}"));
+    println!("cargo:rerun-if-changed={proto_file}");
 }
