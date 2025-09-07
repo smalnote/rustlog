@@ -23,6 +23,8 @@ pub mod p1726;
 pub mod p173;
 #[path = "./1865.find-pairs-with-a-certain-sum.rs"]
 pub mod p1865;
+#[path = "./p1936.add_minimum_number_of_rungs.rs"]
+pub mod p1936;
 #[path = "./199.binary-tree-right-side-view.rs"]
 pub mod p199;
 #[path = "./20.valid-parentheses.rs"]
