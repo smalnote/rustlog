@@ -100,6 +100,8 @@ pub mod p1865;
 pub mod p1936;
 #[path = "./2016.maximum-difference-between-increasing-elements.rs"]
 pub mod p2016;
+#[path = "./2029.stone-game-ix.rs"]
+pub mod p2029;
 #[path = "./2200.find-all-k-distant-indices-in-an-array.rs"]
 pub mod p2200;
 #[path = "./2342.max-sum-of-a-pair-with-equal-sum-of-digits.rs"]
