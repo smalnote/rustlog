@@ -104,6 +104,8 @@ pub mod p2016;
 pub mod p2029;
 #[path = "./2200.find-all-k-distant-indices-in-an-array.rs"]
 pub mod p2200;
+#[path = "./2327.number-of-people-aware-of-a-secret.rs"]
+pub mod p2327;
 #[path = "./2342.max-sum-of-a-pair-with-equal-sum-of-digits.rs"]
 pub mod p2342;
 #[path = "./2368.reachable-nodes-with-restrictions.rs"]
