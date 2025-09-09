@@ -10,6 +10,8 @@ pub mod p0050;
 pub mod p0074;
 #[path = "./0081.search-in-rotated-sorted-array-ii.rs"]
 pub mod p0081;
+#[path = "./0082.remove-duplicates-from-sorted-list-ii.rs"]
+pub mod p0082;
 #[path = "./0089.gray-code.rs"]
 pub mod p0089;
 #[path = "./0109.convert-sorted-list-to-binary-search-tree.rs"]
