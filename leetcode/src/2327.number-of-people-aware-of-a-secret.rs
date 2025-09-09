@@ -6,7 +6,7 @@ pub struct Solution;
 impl Solution {
     const MOD: i32 = 1_000_000_000 + 7;
     pub fn people_aware_of_secret(n: i32, delay: i32, forget: i32) -> i32 {
-        let mut knowns: Vec<i32> = (0..n).map(|_| 0).collect();
+        let mut knowns: Vec<i32> = vec![0; n as usize];
         knowns[0] = 1;
         let mut share_known = 0;
         let (n, delay, forget) = (n as usize, delay as usize, forget as usize);
