@@ -76,6 +76,8 @@ pub mod p0494;
 pub mod p0515;
 #[path = "./0740.delete-and-earn.rs"]
 pub mod p0740;
+#[path = "./0781.rabbits-in-forest.rs"]
+pub mod p0781;
 #[path = "./0802.find-eventual-safe-states.rs"]
 pub mod p0802;
 #[path = "./0805.split-array-with-same-average.rs"]
