@@ -124,3 +124,5 @@ pub mod p2616;
 pub mod p2683;
 #[path = "./3203.find-minimum-diameter-after-mergin-two-trees.rs"]
 pub mod p3203;
+#[path = "./3408.design-task-manager.rs"]
+pub mod p3408;
