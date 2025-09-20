@@ -122,6 +122,8 @@ pub mod p2425;
 pub mod p2616;
 #[path = "./2683.neighboring-bitwise-xor.rs"]
 pub mod p2683;
+#[path = "./2799.count-complete-subarrays-in-an-array.rs"]
+pub mod p2799;
 #[path = "./3203.find-minimum-diameter-after-mergin-two-trees.rs"]
 pub mod p3203;
 #[path = "./3408.design-task-manager.rs"]
