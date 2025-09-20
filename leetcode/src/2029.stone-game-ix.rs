@@ -22,12 +22,12 @@ impl Solution {
             // 需要证明在当前 sum，取任意不输的情况是等价的
             // 余 1, 可取 0, 1
             // 余 2，可取 0, 2
-            if mods[0] > 0 && sum % 3 != 0 {
+            if mods[0] > 0 && !sum.is_multiple_of(3) {
                 mods[0] -= 1;
-            } else if mods[1] > 0 && (sum + 1) % 3 != 0 {
+            } else if mods[1] > 0 && !(sum + 1).is_multiple_of(3) {
                 mods[1] -= 1;
                 sum += 1;
-            } else if mods[2] > 0 && (sum + 2) % 3 != 0 {
+            } else if mods[2] > 0 && !(sum + 2).is_multiple_of(3) {
                 mods[2] -= 1;
                 sum += 2;
             } else {
