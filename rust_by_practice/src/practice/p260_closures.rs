@@ -313,7 +313,7 @@ mod tests {
         /*
          * The closure `move || println!("{}", s)`
          * captures variable `s` by move, but how does it doing with `s` is
-         * just borrow immutable reference, so it alow implements traits
+         * just borrow immutable reference, so it allow implements traits
          * `FnMut()` and `Fn()`
          */
 
@@ -387,7 +387,7 @@ mod tests {
         // The compiler will complain:
         //   *every closure has a distinct type* and so could not always match the
         //   caller-chosen type of parameter `F`
-        fn create_closure() -> impl (Fn(i32) -> i32) {
+        fn create_closure() -> impl Fn(i32) -> i32 {
             let num = 5;
 
             // How does the following closure capture the environment variable `num`
@@ -404,7 +404,7 @@ mod tests {
         assert_eq!(adder(5), 10);
 
         // Return type: `Box<dyn (Fn(i32) -> i32)>` using dynamic dispatch.
-        fn create_closure2() -> Box<dyn (Fn(i32) -> i32)> {
+        fn create_closure2() -> Box<dyn Fn(i32) -> i32> {
             let num = 5;
 
             // How does the following closure capture the environment variable `num`
@@ -461,7 +461,7 @@ mod tests {
 
     #[test]
     fn every_closure_has_a_unique_type() {
-        fn factory(x: i32) -> Box<dyn (Fn(i32) -> i32)> {
+        fn factory(x: i32) -> Box<dyn Fn(i32) -> i32> {
             let num = 5;
             if x > 1 {
                 Box::new(move |x| x + num)
