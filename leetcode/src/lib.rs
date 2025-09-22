@@ -124,6 +124,8 @@ pub mod p2616;
 pub mod p2683;
 #[path = "./2799.count-complete-subarrays-in-an-array.rs"]
 pub mod p2799;
+#[path = "./3005.count-elements-with-maximum-frequency.rs"]
+pub mod p3005;
 #[path = "./3203.find-minimum-diameter-after-mergin-two-trees.rs"]
 pub mod p3203;
 #[path = "./3408.design-task-manager.rs"]
